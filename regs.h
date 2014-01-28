@@ -1,0 +1,18 @@
+#pragma once
+
+#define AX r[0]
+#define CX r[1]
+#define DX r[2]
+#define BX r[3]
+#define SP r[4]
+#define BP r[5]
+#define SI r[6]
+#define DI r[7]
+#define AL *r8[0]
+#define CL *r8[1]
+#define DL *r8[2]
+#define BL *r8[3]
+#define AH *r8[4]
+#define CH *r8[5]
+#define DH *r8[6]
+#define BH *r8[7]

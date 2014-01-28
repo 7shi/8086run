@@ -1,5 +1,5 @@
 #pragma once
-#include "../VMBase.h"
+#include "VMBase.h"
 #include "OpCode.h"
 
 namespace i8086 {

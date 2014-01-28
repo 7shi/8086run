@@ -1,5 +1,4 @@
 #include "VMBase.h"
-#include "UnixBase.h"
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>

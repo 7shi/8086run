@@ -1,6 +1,5 @@
 #pragma once
 #include "utils.h"
-#include "File.h"
 #include <stdio.h>
 #include <vector>
 #include <list>
@@ -14,8 +13,6 @@
 
 extern int trace;
 
-class UnixBase;
-
 struct Symbol {
     std::string name;
     int type, addr;
@@ -27,7 +24,6 @@ struct VMBase {
     uint16_t brksize;
     bool hasExited;
     std::map<int, Symbol> syms[2];
-    UnixBase *unix;
 
     VMBase();
     VMBase(const VMBase &vm);

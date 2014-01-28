@@ -1,5 +1,4 @@
 #include "VM.h"
-#include "../UnixBase.h"
 #include "disasm.h"
 #include "regs.h"
 #include <stdio.h>
@@ -651,7 +650,6 @@ void VM::run1(uint8_t prefix) {
             set16(op->opr1, opr2);
             return;
         case 0xcd: // int imm8
-            if (unix->syscall(opr1)) return;
             break;
         case 0xd0: // byte r/m, 1
             src = get8(op->opr1);
@@ -990,5 +988,4 @@ void VM::run1(uint8_t prefix) {
         debug(oldip, *op);
     }
     fprintf(stderr, "not implemented\n");
-    unix->sys_exit(-1);
 }

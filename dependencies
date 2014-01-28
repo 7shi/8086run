@@ -1,0 +1,9 @@
+./main.o: main.cpp
+./utils.o: utils.cpp utils.h
+./VMBase.o: VMBase.cpp VMBase.h utils.h
+./OpCode.o: OpCode.cpp OpCode.h Operand.h utils.h
+./Operand.o: Operand.cpp Operand.h utils.h disasm.h OpCode.h
+./VM.o: VM.cpp VM.h VMBase.h utils.h OpCode.h Operand.h disasm.h regs.h
+./VM.inst.o: VM.inst.cpp VM.h VMBase.h utils.h OpCode.h Operand.h disasm.h \
+ regs.h
+./disasm.o: disasm.cpp disasm.h OpCode.h Operand.h utils.h

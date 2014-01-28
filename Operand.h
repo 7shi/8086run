@@ -1,5 +1,5 @@
 #pragma once
-#include "../utils.h"
+#include "utils.h"
 #include <string>
 
 namespace i8086 {

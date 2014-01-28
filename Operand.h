@@ -2,56 +2,53 @@
 #include "utils.h"
 #include <string>
 
-namespace i8086 {
+enum OperandType {
+    Reg, SReg, Imm, Addr, Far, Ptr, ModRM
+};
 
-    enum OperandType {
-        Reg, SReg, Imm, Addr, Far, Ptr, ModRM
-    };
+struct Operand {
+    int len;
+    bool w;
+    int type, value, seg;
 
-    struct Operand {
-        int len;
-        bool w;
-        int type, value, seg;
-
-        inline bool empty() const {
-            return len < 0;
-        }
-
-        std::string str() const;
-    };
-
-    inline Operand getopr(int len, bool w, int type, int value, int seg = -1) {
-        Operand ret = {len, w, type, value, seg};
-        return ret;
+    inline bool empty() const {
+        return len < 0;
     }
 
-    extern Operand noopr, dx, cl, es, cs, ss, ds;
+    std::string str() const;
+};
 
-    inline Operand reg(int r, bool w) {
-        return getopr(0, w, Reg, r);
-    }
+inline Operand getopr(int len, bool w, int type, int value, int seg = -1) {
+    Operand ret = {len, w, type, value, seg};
+    return ret;
+}
 
-    inline Operand imm16(uint16_t v) {
-        return getopr(2, true, Imm, v);
-    }
+extern Operand noopr, dx, cl, es, cs, ss, ds;
 
-    inline Operand imm8(uint8_t v) {
-        return getopr(1, false, Imm, v);
-    }
+inline Operand reg(int r, bool w) {
+    return getopr(0, w, Reg, r);
+}
 
-    inline Operand far(uint32_t a) {
-        return getopr(4, false, Far, (int) a);
-    }
+inline Operand imm16(uint16_t v) {
+    return getopr(2, true, Imm, v);
+}
 
-    inline Operand ptr(uint16_t a, bool w) {
-        return getopr(2, w, Ptr, a);
-    }
+inline Operand imm8(uint8_t v) {
+    return getopr(1, false, Imm, v);
+}
 
-    inline Operand disp8(uint8_t *mem, uint16_t addr) {
-        return getopr(1, false, Addr, (uint16_t) (addr + 1 + (int8_t) mem[0]));
-    }
+inline Operand far(uint32_t a) {
+    return getopr(4, false, Far, (int) a);
+}
 
-    inline Operand disp16(uint8_t *mem, uint16_t addr) {
-        return getopr(2, true, Addr, (uint16_t) (addr + 2 + (int16_t) read16(mem)));
-    }
+inline Operand ptr(uint16_t a, bool w) {
+    return getopr(2, w, Ptr, a);
+}
+
+inline Operand disp8(uint8_t *mem, uint16_t addr) {
+    return getopr(1, false, Addr, (uint16_t) (addr + 1 + (int8_t) mem[0]));
+}
+
+inline Operand disp16(uint8_t *mem, uint16_t addr) {
+    return getopr(2, true, Addr, (uint16_t) (addr + 2 + (int16_t) read16(mem)));
 }

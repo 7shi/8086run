@@ -1,11 +1,9 @@
 #include "disasm.h"
 #include <stdio.h>
 
-using namespace i8086;
-
-std::string i8086::regs8 [] = {"al", "cl", "dl", "bl", "ah", "ch", "dh", "bh"};
-std::string i8086::regs16[] = {"ax", "cx", "dx", "bx", "sp", "bp", "si", "di"};
-std::string i8086::sregs [] = {"es", "cs", "ss", "ds"};
+std::string regs8 [] = {"al", "cl", "dl", "bl", "ah", "ch", "dh", "bh"};
+std::string regs16[] = {"ax", "cx", "dx", "bx", "sp", "bp", "si", "di"};
+std::string sregs [] = {"es", "cs", "ss", "ds"};
 
 static inline Operand modrm(uint8_t *mem, bool w) {
     uint8_t b = mem[1], mod = b >> 6, rm = b & 7;
@@ -44,7 +42,7 @@ static inline OpCode aimm(uint8_t *mem, const char *mne) {
             getop(2, mne, reg(0, false), imm8(mem[1]));
 }
 
-OpCode i8086::disasm1(uint8_t *text, uint16_t addr) {
+OpCode disasm1(uint8_t *text, uint16_t addr) {
     uint8_t *mem = text + addr, b = mem[0];
     switch (b) {
         case 0x00:
@@ -349,7 +347,7 @@ OpCode i8086::disasm1(uint8_t *text, uint16_t addr) {
     return undefop;
 }
 
-OpCode i8086::disasm1(uint8_t *text, uint16_t addr, size_t size) {
+OpCode disasm1(uint8_t *text, uint16_t addr, size_t size) {
     OpCode op1 = disasm1(text, addr);
     uint16_t addr2 = addr + op1.len;
     if (addr2 > size) return undefop;
@@ -372,7 +370,7 @@ OpCode i8086::disasm1(uint8_t *text, uint16_t addr, size_t size) {
     return op2;
 }
 
-void i8086::disasm(uint8_t *text, size_t size) {
+void disasm(uint8_t *text, size_t size) {
     int addr = 0, undef = 0;
     while (addr < (int) size) {
         OpCode op = disasm1(text, addr, size);
@@ -383,7 +381,7 @@ void i8086::disasm(uint8_t *text, size_t size) {
     if (undef) printf("undefined: %d\n", undef);
 }
 
-void i8086::disout(uint8_t *text, uint16_t addr, int len, const std::string &ops) {
+void disout(uint8_t *text, uint16_t addr, int len, const std::string &ops) {
     for (int i = 0; i < len; i += 6) {
         int left = len - i;
         if (left > 6) left = 6;

@@ -3,8 +3,6 @@
 #include "regs.h"
 #include <stdio.h>
 
-using namespace i8086;
-
 void VM::run1(uint8_t prefix) {
     OpCode *op, op1;
     if (cache.empty()) {

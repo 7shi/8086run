@@ -1,29 +1,51 @@
 #pragma once
-#include "VMBase.h"
 #include "OpCode.h"
 
+extern int trace;
 extern const char *header;
 
-struct VM : public VMBase {
+struct VM {
+    uint8_t *mem;
+    bool hasExited;
+    
     uint16_t ip, r[8];
     uint8_t * r8[8];
     bool OF, DF, SF, ZF, PF, CF;
     uint16_t start_sp;
-    std::vector<OpCode> cache;
 
     static bool ptable[256];
     void init();
 
     VM();
-    VM(const VM &vm);
     virtual ~VM();
 
-    virtual bool load(const std::string &fn, FILE *f, size_t size);
-    virtual void disasm();
-    virtual void showHeader();
-    virtual void run2();
+    inline uint8_t read8(uint16_t addr) {
+        return mem[addr];
+    }
 
-    std::string disstr(const OpCode &op);
+    inline uint16_t read16(uint16_t addr) {
+        return ::read16(mem + addr);
+    }
+
+    inline uint32_t read32(uint16_t addr) {
+        return ::read32(mem + addr);
+    }
+
+    inline void write8(uint16_t addr, uint8_t value) {
+        mem[addr] = value;
+    }
+
+    inline void write16(uint16_t addr, uint16_t value) {
+        ::write16(mem + addr, value);
+    }
+
+    inline void write32(uint16_t addr, uint32_t value) {
+        ::write32(mem + addr, value);
+    }
+
+    void showHeader();
+    void run2();
+
     void run1(uint8_t prefix = 0);
     void debug(uint16_t ip, const OpCode &op);
     int addr(const Operand &opr);

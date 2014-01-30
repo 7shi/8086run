@@ -9,8 +9,6 @@
       <in>VM.cpp</in>
       <in>VM.h</in>
       <in>VM.inst.cpp</in>
-      <in>VMBase.cpp</in>
-      <in>VMBase.h</in>
       <in>disasm.cpp</in>
       <in>disasm.h</in>
       <in>main.cpp</in>
@@ -66,10 +64,6 @@
       <item path="VM.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="VM.inst.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="VMBase.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="VMBase.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="disasm.cpp" ex="false" tool="1" flavor2="0">
       </item>

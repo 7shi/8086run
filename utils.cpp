@@ -2,9 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
-#ifdef WIN32
-#include <windows.h>
-#endif
 
 std::string rootpath;
 
@@ -50,32 +47,6 @@ std::string hexdump2(uint8_t *mem, int len) {
     return ret;
 }
 
-void setroot(std::string root) {
-    while (endsWith(root, "/"))
-        root = root.substr(0, root.size() - 1);
-    rootpath = root;
-}
-
-std::string convpath(const std::string &path) {
-#ifdef WIN32
-    if (startsWith(path, "/tmp/"))
-        return getenv("TEMP") + path.substr(4);
-    if (startsWith(path, "/usr/tmp/"))
-        return getenv("TEMP") + path.substr(8);
-#else
-    if (startsWith(path, "/usr/tmp/"))
-        return path.substr(4);
-#endif
-    if (!rootpath.empty()) {
-        if (startsWith(path, "/")) {
-            std::string path2 = rootpath + path;
-            struct stat st;
-            if (!stat(path2.c_str(), &st)) return path2;
-        }
-    }
-    return path;
-}
-
 bool startsWith(const std::string &s, const std::string &prefix) {
     if (s.size() < prefix.size()) return false;
     return s.substr(0, prefix.size()) == prefix;
@@ -101,25 +72,3 @@ std::string replace(const std::string &src, const std::string &s1, const std::st
     }
     return ret;
 }
-
-#ifdef WIN32
-
-std::string getErrorMessage(int err) {
-    LPVOID lpMsgBuf;
-    FormatMessage(
-            FORMAT_MESSAGE_ALLOCATE_BUFFER |
-            FORMAT_MESSAGE_FROM_SYSTEM |
-            FORMAT_MESSAGE_IGNORE_INSERTS,
-            NULL,
-            err,
-            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-            (LPTSTR) & lpMsgBuf,
-            0,
-            NULL
-            );
-    std::string ret = replace((const char *) lpMsgBuf, "\r\n", "\n");
-    LocalFree(lpMsgBuf);
-    if (!endsWith(ret, "\n")) ret += "\n";
-    return ret;
-}
-#endif

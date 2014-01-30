@@ -369,27 +369,3 @@ OpCode disasm1(uint8_t *text, uint16_t addr, size_t size) {
     op2.prefix = op1.prefix;
     return op2;
 }
-
-void disasm(uint8_t *text, size_t size) {
-    int addr = 0, undef = 0;
-    while (addr < (int) size) {
-        OpCode op = disasm1(text, addr, size);
-        disout(text, addr, op.len, op.str());
-        if (op.undef()) undef++;
-        addr += op.len;
-    }
-    if (undef) printf("undefined: %d\n", undef);
-}
-
-void disout(uint8_t *text, uint16_t addr, int len, const std::string &ops) {
-    for (int i = 0; i < len; i += 6) {
-        int left = len - i;
-        if (left > 6) left = 6;
-        std::string hex = hexdump(text + addr + i, left);
-        if (i == 0) {
-            printf("%04x: %-12s  %s\n", addr, hex.c_str(), ops.c_str());
-        } else {
-            printf("      %-12s\n", hex.c_str());
-        }
-    }
-}

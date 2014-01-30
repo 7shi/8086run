@@ -4,47 +4,28 @@
 #include <stdio.h>
 
 void VM::run1(uint8_t prefix) {
-    OpCode *op, op1;
-    if (cache.empty()) {
-        op = &(op1 = disasm1(text, ip, tsize));
-    } else {
-        if (cache[ip].len > 0) {
-            op = &cache[ip];
-        } else {
-            op = &(cache[ip] = disasm1(text, ip, tsize));
-        }
-    }
-    if (ip + op->len > tsize) {
-        fprintf(stderr, "overrun: %04x\n", ip);
-        hasExited = true;
-        return;
-    }
-    if (SP < brksize) {
-        fprintf(stderr, "stack overflow: %04x\n", SP);
-        hasExited = true;
-        return;
-    }
-    int opr1 = op->opr1.value, opr2 = op->opr2.value;
-    if (trace >= 2 && !prefix) debug(ip, *op);
-    uint8_t b = text[ip];
+    OpCode op = disasm1(mem, ip, 0x10000);
+    int opr1 = op.opr1.value, opr2 = op.opr2.value;
+    if (trace >= 2 && !prefix) debug(ip, op);
+    uint8_t b = mem[ip];
     uint16_t oldip = ip;
     int dst, src, val;
-    ip += op->len;
+    ip += op.len;
     switch (b) {
         case 0x00: // add r/m, reg8
-            val = int8_t(dst = get8(op->opr1)) + int8_t(*r8[opr2]);
-            set8(op->opr1, setf8(val, dst > uint8_t(val)));
+            val = int8_t(dst = get8(op.opr1)) + int8_t(*r8[opr2]);
+            set8(op.opr1, setf8(val, dst > uint8_t(val)));
             return;
         case 0x01: // add r/m, reg16
-            val = int16_t(dst = get16(op->opr1)) + int16_t(r[opr2]);
-            set16(op->opr1, setf16(val, dst > uint16_t(val)));
+            val = int16_t(dst = get16(op.opr1)) + int16_t(r[opr2]);
+            set16(op.opr1, setf16(val, dst > uint16_t(val)));
             return;
         case 0x02: // add reg8, r/m
-            val = int8_t(dst = *r8[opr1]) + int8_t(get8(op->opr2));
+            val = int8_t(dst = *r8[opr1]) + int8_t(get8(op.opr2));
             *r8[opr1] = setf8(val, dst > uint8_t(val));
             return;
         case 0x03: // add reg16, r/m
-            val = int16_t(dst = r[opr1]) + int16_t(get16(op->opr2));
+            val = int16_t(dst = r[opr1]) + int16_t(get16(op.opr2));
             r[opr1] = setf16(val, dst > uint16_t(val));
             return;
         case 0x04: // add al, imm8
@@ -56,16 +37,16 @@ void VM::run1(uint8_t prefix) {
             AX = setf16(val, dst > uint16_t(val));
             return;
         case 0x08: // or r/m, reg8
-            set8(op->opr1, setf8(int8_t(get8(op->opr1) | *r8[opr2]), false));
+            set8(op.opr1, setf8(int8_t(get8(op.opr1) | *r8[opr2]), false));
             return;
         case 0x09: // or r/m, reg16
-            set16(op->opr1, setf16(int16_t(get16(op->opr1) | r[opr2]), false));
+            set16(op.opr1, setf16(int16_t(get16(op.opr1) | r[opr2]), false));
             return;
         case 0x0a: // or reg8, r/m
-            *r8[opr1] = setf8(int8_t(*r8[opr1] | get8(op->opr2)), false);
+            *r8[opr1] = setf8(int8_t(*r8[opr1] | get8(op.opr2)), false);
             return;
         case 0x0b: // or reg16, r/m
-            r[opr1] = setf16(int16_t(r[opr1] | get16(op->opr2)), false);
+            r[opr1] = setf16(int16_t(r[opr1] | get16(op.opr2)), false);
             return;
         case 0x0c: // or al, imm8
             AL = setf8(int8_t(AL | opr2), false);
@@ -74,19 +55,19 @@ void VM::run1(uint8_t prefix) {
             AX = setf16(int16_t(AX | opr2), false);
             return;
         case 0x10: // adc r/m, reg8
-            val = int8_t(dst = get8(op->opr1)) + int8_t(*r8[opr2]) + int(CF);
-            set8(op->opr1, setf8(val, dst > uint8_t(val)));
+            val = int8_t(dst = get8(op.opr1)) + int8_t(*r8[opr2]) + int(CF);
+            set8(op.opr1, setf8(val, dst > uint8_t(val)));
             return;
         case 0x11: // adc r/m, reg16
-            val = int16_t(dst = get16(op->opr1)) + int16_t(r[opr2]) + int(CF);
-            set16(op->opr1, setf16(val, dst > uint16_t(val)));
+            val = int16_t(dst = get16(op.opr1)) + int16_t(r[opr2]) + int(CF);
+            set16(op.opr1, setf16(val, dst > uint16_t(val)));
             return;
         case 0x12: // adc reg8, r/m
-            val = int8_t(dst = *r8[opr1]) + int8_t(get8(op->opr2)) + int(CF);
+            val = int8_t(dst = *r8[opr1]) + int8_t(get8(op.opr2)) + int(CF);
             *r8[opr1] = setf8(val, dst > uint8_t(val));
             return;
         case 0x13: // adc reg16, r/m
-            val = int16_t(dst = r[opr1]) + int16_t(get16(op->opr2)) + int(CF);
+            val = int16_t(dst = r[opr1]) + int16_t(get16(op.opr2)) + int(CF);
             r[opr1] = setf16(val, dst > uint16_t(val));
             return;
         case 0x14: // adc al, imm8
@@ -98,19 +79,19 @@ void VM::run1(uint8_t prefix) {
             AX = setf16(val, dst > uint16_t(val));
             return;
         case 0x18: // sbb r/m, reg8
-            val = int8_t(dst = get8(op->opr1)) - int8_t(src = *r8[opr2] + int(CF));
-            set8(op->opr1, setf8(val, dst < src));
+            val = int8_t(dst = get8(op.opr1)) - int8_t(src = *r8[opr2] + int(CF));
+            set8(op.opr1, setf8(val, dst < src));
             return;
         case 0x19: // sbb r/m, reg16
-            val = int16_t(dst = get16(op->opr1)) - int16_t(src = r[opr2] + int(CF));
-            set16(op->opr1, setf16(val, dst < src));
+            val = int16_t(dst = get16(op.opr1)) - int16_t(src = r[opr2] + int(CF));
+            set16(op.opr1, setf16(val, dst < src));
             return;
         case 0x1a: // sbb reg8, r/m
-            val = int8_t(dst = *r8[opr1]) - int8_t(src = get8(op->opr2) + int(CF));
+            val = int8_t(dst = *r8[opr1]) - int8_t(src = get8(op.opr2) + int(CF));
             *r8[opr1] = setf8(val, dst < src);
             return;
         case 0x1b: // sbb reg16, r/m
-            val = int16_t(dst = r[opr1]) - int16_t(src = get16(op->opr2) + int(CF));
+            val = int16_t(dst = r[opr1]) - int16_t(src = get16(op.opr2) + int(CF));
             r[opr1] = setf16(val, dst < src);
             return;
         case 0x1c: // sbb al, imm8
@@ -122,16 +103,16 @@ void VM::run1(uint8_t prefix) {
             AX = setf16(val, dst < src);
             return;
         case 0x20: // and r/m, reg8
-            set8(op->opr1, setf8(int8_t(get8(op->opr1) & *r8[opr2]), false));
+            set8(op.opr1, setf8(int8_t(get8(op.opr1) & *r8[opr2]), false));
             return;
         case 0x21: // and r/m, reg16
-            set16(op->opr1, setf16(int16_t(get16(op->opr1) & r[opr2]), false));
+            set16(op.opr1, setf16(int16_t(get16(op.opr1) & r[opr2]), false));
             return;
         case 0x22: // and reg8, r/m
-            *r8[opr1] = setf8(int8_t(*r8[opr1] & get8(op->opr2)), false);
+            *r8[opr1] = setf8(int8_t(*r8[opr1] & get8(op.opr2)), false);
             return;
         case 0x23: // and reg16, r/m
-            r[opr1] = setf16(int16_t(r[opr1] & get16(op->opr2)), false);
+            r[opr1] = setf16(int16_t(r[opr1] & get16(op.opr2)), false);
             return;
         case 0x24: // and al, imm8
             AL = setf8(int8_t(AL & opr2), false);
@@ -140,19 +121,19 @@ void VM::run1(uint8_t prefix) {
             AX = setf16(int16_t(AX & opr2), false);
             return;
         case 0x28: // sub r/m, reg8
-            val = int8_t(dst = get8(op->opr1)) - int8_t(src = *r8[opr2]);
-            set8(op->opr1, setf8(val, dst < src));
+            val = int8_t(dst = get8(op.opr1)) - int8_t(src = *r8[opr2]);
+            set8(op.opr1, setf8(val, dst < src));
             return;
         case 0x29: // sub r/m, reg16
-            val = int16_t(dst = get16(op->opr1)) - int16_t(src = r[opr2]);
-            set16(op->opr1, setf16(val, dst < src));
+            val = int16_t(dst = get16(op.opr1)) - int16_t(src = r[opr2]);
+            set16(op.opr1, setf16(val, dst < src));
             return;
         case 0x2a: // sub reg8, r/m
-            val = int8_t(dst = *r8[opr1]) - int8_t(src = get8(op->opr2));
+            val = int8_t(dst = *r8[opr1]) - int8_t(src = get8(op.opr2));
             *r8[opr1] = setf8(val, dst < src);
             return;
         case 0x2b: // sub reg16, r/m
-            val = int16_t(dst = r[opr1]) - int16_t(src = get16(op->opr2));
+            val = int16_t(dst = r[opr1]) - int16_t(src = get16(op.opr2));
             r[opr1] = setf16(val, dst < src);
             return;
         case 0x2c: // sub al, imm8
@@ -164,16 +145,16 @@ void VM::run1(uint8_t prefix) {
             AX = setf16(val, dst < src);
             return;
         case 0x30: // xor r/m, reg8
-            set8(op->opr1, setf8(int8_t(get8(op->opr1) ^ *r8[opr2]), false));
+            set8(op.opr1, setf8(int8_t(get8(op.opr1) ^ *r8[opr2]), false));
             return;
         case 0x31: // xor r/m, reg16
-            set16(op->opr1, setf16(int16_t(get16(op->opr1) ^ r[opr2]), false));
+            set16(op.opr1, setf16(int16_t(get16(op.opr1) ^ r[opr2]), false));
             return;
         case 0x32: // xor reg8, r/m
-            *r8[opr1] = setf8(int8_t(*r8[opr1] ^ get8(op->opr2)), false);
+            *r8[opr1] = setf8(int8_t(*r8[opr1] ^ get8(op.opr2)), false);
             return;
         case 0x33: // xor reg16, r/m
-            r[opr1] = setf16(int16_t(r[opr1] ^ get16(op->opr2)), false);
+            r[opr1] = setf16(int16_t(r[opr1] ^ get16(op.opr2)), false);
             return;
         case 0x34: // xor al, imm8
             AL = setf8(int8_t(AL ^ opr2), false);
@@ -182,19 +163,19 @@ void VM::run1(uint8_t prefix) {
             AX = setf16(int16_t(AX ^ opr2), false);
             return;
         case 0x38: // cmp r/m, reg8
-            val = int8_t(dst = get8(op->opr1)) - int8_t(src = *r8[opr2]);
+            val = int8_t(dst = get8(op.opr1)) - int8_t(src = *r8[opr2]);
             setf8(val, dst < src);
             return;
         case 0x39: // cmp r/m, reg16
-            val = int16_t(dst = get16(op->opr1)) - int16_t(src = r[opr2]);
+            val = int16_t(dst = get16(op.opr1)) - int16_t(src = r[opr2]);
             setf16(val, dst < src);
             return;
         case 0x3a: // cmp reg8, r/m
-            val = int8_t(dst = *r8[opr1]) - int8_t(src = get8(op->opr2));
+            val = int8_t(dst = *r8[opr1]) - int8_t(src = get8(op.opr2));
             setf8(val, dst < src);
             return;
         case 0x3b: // cmp reg16, r/m
-            val = int16_t(dst = r[opr1]) - int16_t(src = get16(op->opr2));
+            val = int16_t(dst = r[opr1]) - int16_t(src = get16(op.opr2));
             setf16(val, dst < src);
             return;
         case 0x3c: // cmp al, imm8
@@ -297,152 +278,152 @@ void VM::run1(uint8_t prefix) {
             if (!ZF && SF == OF) ip = opr1;
             return;
         case 0x80: // r/m, imm8
-            switch ((text[oldip + 1] >> 3) & 7) {
+            switch ((mem[oldip + 1] >> 3) & 7) {
                 case 0: // add
-                    val = int8_t(dst = get8(op->opr1)) + int8_t(opr2);
-                    set8(op->opr1, setf8(val, dst > uint8_t(val)));
+                    val = int8_t(dst = get8(op.opr1)) + int8_t(opr2);
+                    set8(op.opr1, setf8(val, dst > uint8_t(val)));
                     return;
                 case 1: // or
-                    set8(op->opr1, setf8(int8_t(get8(op->opr1) | opr2), false));
+                    set8(op.opr1, setf8(int8_t(get8(op.opr1) | opr2), false));
                     return;
                 case 2: // adc
-                    val = int8_t(dst = get8(op->opr1)) + int8_t(opr2) + int(CF);
-                    set8(op->opr1, setf8(val, dst > uint8_t(val)));
+                    val = int8_t(dst = get8(op.opr1)) + int8_t(opr2) + int(CF);
+                    set8(op.opr1, setf8(val, dst > uint8_t(val)));
                     return;
                 case 3: // sbb
-                    val = int8_t(dst = get8(op->opr1)) - int8_t(src = opr2 + int(CF));
-                    set8(op->opr1, setf8(val, dst < src));
+                    val = int8_t(dst = get8(op.opr1)) - int8_t(src = opr2 + int(CF));
+                    set8(op.opr1, setf8(val, dst < src));
                     return;
                 case 4: // and
-                    set8(op->opr1, setf8(int8_t(get8(op->opr1) & opr2), false));
+                    set8(op.opr1, setf8(int8_t(get8(op.opr1) & opr2), false));
                     return;
                 case 5: // sub
-                    val = int8_t(dst = get8(op->opr1)) - int8_t(src = opr2);
-                    set8(op->opr1, setf8(val, dst < src));
+                    val = int8_t(dst = get8(op.opr1)) - int8_t(src = opr2);
+                    set8(op.opr1, setf8(val, dst < src));
                     return;
                 case 6: // xor
-                    set8(op->opr1, setf8(int8_t(get8(op->opr1) ^ opr2), false));
+                    set8(op.opr1, setf8(int8_t(get8(op.opr1) ^ opr2), false));
                     return;
                 case 7: // cmp
-                    val = int8_t(dst = get8(op->opr1)) - int8_t(src = opr2);
+                    val = int8_t(dst = get8(op.opr1)) - int8_t(src = opr2);
                     setf8(val, dst < src);
                     return;
             }
             break;
         case 0x81: // r/m, imm16
-            switch ((text[oldip + 1] >> 3) & 7) {
+            switch ((mem[oldip + 1] >> 3) & 7) {
                 case 0: // add
-                    val = int16_t(dst = get16(op->opr1)) + int16_t(opr2);
-                    set16(op->opr1, setf16(val, dst > uint16_t(val)));
+                    val = int16_t(dst = get16(op.opr1)) + int16_t(opr2);
+                    set16(op.opr1, setf16(val, dst > uint16_t(val)));
                     return;
                 case 1: // or
-                    set16(op->opr1, setf16(int16_t(get16(op->opr1) | opr2), false));
+                    set16(op.opr1, setf16(int16_t(get16(op.opr1) | opr2), false));
                     return;
                 case 2: // adc
-                    val = int16_t(dst = get16(op->opr1)) + int16_t(opr2) + int(CF);
-                    set16(op->opr1, setf16(val, dst > uint16_t(val)));
+                    val = int16_t(dst = get16(op.opr1)) + int16_t(opr2) + int(CF);
+                    set16(op.opr1, setf16(val, dst > uint16_t(val)));
                     return;
                 case 3: // sbb
-                    val = int16_t(dst = get16(op->opr1)) - int16_t(src = opr2 + int(CF));
-                    set16(op->opr1, setf16(val, dst < src));
+                    val = int16_t(dst = get16(op.opr1)) - int16_t(src = opr2 + int(CF));
+                    set16(op.opr1, setf16(val, dst < src));
                     return;
                 case 4: // and
-                    set16(op->opr1, setf16(int16_t(get16(op->opr1) & opr2), false));
+                    set16(op.opr1, setf16(int16_t(get16(op.opr1) & opr2), false));
                     return;
                 case 5: // sub
-                    val = int16_t(dst = get16(op->opr1)) - int16_t(src = opr2);
-                    set16(op->opr1, setf16(val, dst < src));
+                    val = int16_t(dst = get16(op.opr1)) - int16_t(src = opr2);
+                    set16(op.opr1, setf16(val, dst < src));
                     return;
                 case 6: // xor
-                    set16(op->opr1, setf16(int16_t(get16(op->opr1) ^ opr2), false));
+                    set16(op.opr1, setf16(int16_t(get16(op.opr1) ^ opr2), false));
                     return;
                 case 7: // cmp
-                    val = int16_t(dst = get16(op->opr1)) - int16_t(src = opr2);
+                    val = int16_t(dst = get16(op.opr1)) - int16_t(src = opr2);
                     setf16(val, dst < src);
                     return;
             }
             break;
         case 0x82: // r/m, imm8(signed)
-            switch ((text[oldip + 1] >> 3) & 7) {
+            switch ((mem[oldip + 1] >> 3) & 7) {
                 case 0: // add
-                    val = int8_t(dst = get8(op->opr1)) + int8_t(opr2);
-                    set8(op->opr1, setf8(val, dst > uint8_t(val)));
+                    val = int8_t(dst = get8(op.opr1)) + int8_t(opr2);
+                    set8(op.opr1, setf8(val, dst > uint8_t(val)));
                     return;
                 case 2: // adc
-                    val = int8_t(dst = get8(op->opr1)) + int8_t(opr2) + int(CF);
-                    set8(op->opr1, setf8(val, dst > uint8_t(val)));
+                    val = int8_t(dst = get8(op.opr1)) + int8_t(opr2) + int(CF);
+                    set8(op.opr1, setf8(val, dst > uint8_t(val)));
                     return;
                 case 3: // sbb
-                    val = int8_t(dst = get8(op->opr1)) - int8_t(src = opr2 + int(CF));
-                    set8(op->opr1, setf8(val, dst < uint8_t(src)));
+                    val = int8_t(dst = get8(op.opr1)) - int8_t(src = opr2 + int(CF));
+                    set8(op.opr1, setf8(val, dst < uint8_t(src)));
                     return;
                 case 5: // sub
-                    val = int8_t(dst = get8(op->opr1)) - int8_t(src = opr2);
-                    set8(op->opr1, setf8(val, dst < uint8_t(src)));
+                    val = int8_t(dst = get8(op.opr1)) - int8_t(src = opr2);
+                    set8(op.opr1, setf8(val, dst < uint8_t(src)));
                     return;
                 case 7: // cmp
-                    val = int8_t(dst = get8(op->opr1)) - int8_t(src = opr2);
+                    val = int8_t(dst = get8(op.opr1)) - int8_t(src = opr2);
                     setf8(val, dst < uint8_t(src));
                     return;
             }
             break;
         case 0x83: // r/m, imm16(signed)
-            switch ((text[oldip + 1] >> 3) & 7) {
+            switch ((mem[oldip + 1] >> 3) & 7) {
                 case 0: // add
-                    val = int16_t(dst = get16(op->opr1)) + int8_t(opr2);
-                    set16(op->opr1, setf16(val, dst > uint16_t(val)));
+                    val = int16_t(dst = get16(op.opr1)) + int8_t(opr2);
+                    set16(op.opr1, setf16(val, dst > uint16_t(val)));
                     return;
                 case 2: // adc
-                    val = int16_t(dst = get16(op->opr1)) + int8_t(opr2) + int(CF);
-                    set16(op->opr1, setf16(val, dst > uint16_t(val)));
+                    val = int16_t(dst = get16(op.opr1)) + int8_t(opr2) + int(CF);
+                    set16(op.opr1, setf16(val, dst > uint16_t(val)));
                     return;
                 case 3: // sbb
-                    val = int16_t(dst = get16(op->opr1)) - int8_t(src = opr2 + int(CF));
-                    set16(op->opr1, setf16(val, dst < uint16_t(src)));
+                    val = int16_t(dst = get16(op.opr1)) - int8_t(src = opr2 + int(CF));
+                    set16(op.opr1, setf16(val, dst < uint16_t(src)));
                     return;
                 case 5: // sub
-                    val = int16_t(dst = get16(op->opr1)) - int8_t(src = opr2);
-                    set16(op->opr1, setf16(val, dst < uint16_t(src)));
+                    val = int16_t(dst = get16(op.opr1)) - int8_t(src = opr2);
+                    set16(op.opr1, setf16(val, dst < uint16_t(src)));
                     return;
                 case 7: // cmp
-                    val = int16_t(dst = get16(op->opr1)) - int8_t(src = opr2);
+                    val = int16_t(dst = get16(op.opr1)) - int8_t(src = opr2);
                     setf16(val, dst < uint16_t(src));
                     return;
             }
             break;
         case 0x84: // test r/m, reg8
-            setf8(int8_t(get8(op->opr1) & *r8[opr2]), false);
+            setf8(int8_t(get8(op.opr1) & *r8[opr2]), false);
             return;
         case 0x85: // test r/m, reg16
-            setf16(int16_t(get16(op->opr1) & r[opr2]), false);
+            setf16(int16_t(get16(op.opr1) & r[opr2]), false);
             return;
         case 0x86: // xchg r/m, reg8
             val = *r8[opr2];
-            *r8[opr2] = get8(op->opr1);
-            set8(op->opr1, val);
+            *r8[opr2] = get8(op.opr1);
+            set8(op.opr1, val);
             return;
         case 0x87: // xchg r/m, reg16
             val = r[opr2];
-            r[opr2] = get16(op->opr1);
-            set16(op->opr1, val);
+            r[opr2] = get16(op.opr1);
+            set16(op.opr1, val);
             return;
         case 0x88: // mov r/m, reg8
-            set8(op->opr1, *r8[opr2]);
+            set8(op.opr1, *r8[opr2]);
             return;
         case 0x89: // mov r/m, reg16
-            set16(op->opr1, r[opr2]);
+            set16(op.opr1, r[opr2]);
             return;
         case 0x8a: // mov reg8, r/m
-            *r8[opr1] = get8(op->opr2);
+            *r8[opr1] = get8(op.opr2);
             return;
         case 0x8b: // mov reg16, r/m
-            r[opr1] = get16(op->opr2);
+            r[opr1] = get16(op.opr2);
             return;
         case 0x8d: // lea reg16, r/m
-            r[opr1] = addr(op->opr2);
+            r[opr1] = addr(op.opr2);
             return;
         case 0x8f: // pop r/m
-            set16(op->opr1, read16(SP));
+            set16(op.opr1, read16(SP));
             SP += 2;
             return;
         case 0x90: // nop
@@ -488,16 +469,16 @@ void VM::run1(uint8_t prefix) {
             AH = (SF << 7) | (ZF << 6) | (PF << 2) | 2 | CF;
             return;
         case 0xa0: // mov al, [addr]
-            AL = get8(op->opr2);
+            AL = get8(op.opr2);
             return;
         case 0xa1: // mov ax, [addr]
-            AX = get16(op->opr2);
+            AX = get16(op.opr2);
             return;
         case 0xa2: // mov [addr], al
-            set8(op->opr1, AL);
+            set8(op.opr1, AL);
             return;
         case 0xa3: // mov [addr], ax
-            set16(op->opr1, AX);
+            set16(op.opr1, AX);
             return;
         case 0xa4: // movsb
             do {
@@ -642,104 +623,104 @@ void VM::run1(uint8_t prefix) {
             SP += 2;
             return;
         case 0xc6: // mov r/m, imm8
-            set8(op->opr1, opr2);
+            set8(op.opr1, opr2);
             return;
         case 0xc7: // mov r/m, imm16
-            set16(op->opr1, opr2);
+            set16(op.opr1, opr2);
             return;
         case 0xcd: // int imm8
             break;
         case 0xd0: // byte r/m, 1
-            src = get8(op->opr1);
-            switch ((text[oldip + 1] >> 3) & 7) {
+            src = get8(op.opr1);
+            switch ((mem[oldip + 1] >> 3) & 7) {
                 case 0: // rol
                     CF = src & 0x80;
-                    set8(op->opr1, (src << 1) | CF);
+                    set8(op.opr1, (src << 1) | CF);
                     OF = CF ^ bool(src & 0x40);
                     return;
                 case 1: // ror
                     CF = src & 1;
-                    set8(op->opr1, (src >> 1) | (CF ? 0x80 : 0));
+                    set8(op.opr1, (src >> 1) | (CF ? 0x80 : 0));
                     OF = CF ^ bool(src & 0x80);
                     return;
                 case 2: // rcl
-                    set8(op->opr1, (src << 1) | CF);
+                    set8(op.opr1, (src << 1) | CF);
                     CF = src & 0x80;
                     OF = CF ^ bool(src & 0x40);
                     return;
                 case 3: // rcr
-                    set8(op->opr1, (src >> 1) | (CF ? 0x80 : 0));
+                    set8(op.opr1, (src >> 1) | (CF ? 0x80 : 0));
                     OF = CF ^ bool(src & 0x80);
                     CF = src & 1;
                     return;
                 case 4: // shl/sal
-                    set8(op->opr1, setf8(int8_t(src) << 1, src & 0x80));
+                    set8(op.opr1, setf8(int8_t(src) << 1, src & 0x80));
                     return;
                 case 5: // shr
-                    set8(op->opr1, setf8(int8_t(src >> 1), src & 1));
+                    set8(op.opr1, setf8(int8_t(src >> 1), src & 1));
                     OF = src & 0x80;
                     return;
                 case 7: // sar
-                    set8(op->opr1, setf8(int8_t(src) >> 1, src & 1));
+                    set8(op.opr1, setf8(int8_t(src) >> 1, src & 1));
                     OF = false;
                     return;
             }
             break;
         case 0xd1: // r/m, 1
-            src = get16(op->opr1);
-            switch ((text[oldip + 1] >> 3) & 7) {
+            src = get16(op.opr1);
+            switch ((mem[oldip + 1] >> 3) & 7) {
                 case 0: // rol
                     CF = src & 0x8000;
-                    set16(op->opr1, (src << 1) | CF);
+                    set16(op.opr1, (src << 1) | CF);
                     OF = CF ^ bool(src & 0x4000);
                     return;
                 case 1: // ror
                     CF = src & 1;
-                    set16(op->opr1, (src >> 1) | (CF ? 0x8000 : 0));
+                    set16(op.opr1, (src >> 1) | (CF ? 0x8000 : 0));
                     OF = CF ^ bool(src & 0x8000);
                     return;
                 case 2: // rcl
-                    set16(op->opr1, (src << 1) | CF);
+                    set16(op.opr1, (src << 1) | CF);
                     CF = src & 0x8000;
                     OF = CF ^ bool(src & 0x4000);
                     return;
                 case 3: // rcr
-                    set16(op->opr1, (src >> 1) | (CF ? 0x8000 : 0));
+                    set16(op.opr1, (src >> 1) | (CF ? 0x8000 : 0));
                     OF = CF ^ bool(src & 0x8000);
                     CF = src & 1;
                     return;
                 case 4: // shl/sal
-                    set16(op->opr1, setf16(int16_t(src) << 1, src & 0x8000));
+                    set16(op.opr1, setf16(int16_t(src) << 1, src & 0x8000));
                     return;
                 case 5: // shr
-                    set16(op->opr1, setf16(int16_t(src >> 1), src & 1));
+                    set16(op.opr1, setf16(int16_t(src >> 1), src & 1));
                     OF = src & 0x8000;
                     return;
                 case 7: // sar
-                    set16(op->opr1, setf16(int16_t(src) >> 1, src & 1));
+                    set16(op.opr1, setf16(int16_t(src) >> 1, src & 1));
                     OF = false;
                     return;
             }
             break;
         case 0xd2: // byte r/m, cl
-            val = get8(op->opr1);
-            switch ((text[oldip + 1] >> 3) & 7) {
+            val = get8(op.opr1);
+            switch ((mem[oldip + 1] >> 3) & 7) {
                 case 0: // rol
                     for (int i = 0; i < CL; i++)
                         val = (val << 1) | (CF = val & 0x80);
-                    set8(op->opr1, val);
+                    set8(op.opr1, val);
                     return;
                 case 1: // ror
                     for (int i = 0; i < CL; i++)
                         val = (val >> 1) | ((CF = val & 1) ? 0x80 : 0);
-                    set8(op->opr1, val);
+                    set8(op.opr1, val);
                     return;
                 case 2: // rcl
                     for (int i = 0; i < CL; i++) {
                         val = (val << 1) | CF;
                         CF = val & 0x100;
                     }
-                    set8(op->opr1, val);
+                    set8(op.opr1, val);
                     return;
                 case 3: // rcr
                     for (int i = 0; i < CL; i++) {
@@ -747,71 +728,71 @@ void VM::run1(uint8_t prefix) {
                         val = (val >> 1) | (CF ? 0x80 : 0);
                         CF = f;
                     }
-                    set8(op->opr1, val);
+                    set8(op.opr1, val);
                     return;
                 case 4: // shl/sal
                     if (CL > 0) {
                         val <<= CL;
-                        set8(op->opr1, setf8(int8_t(val), val & 0x100));
+                        set8(op.opr1, setf8(int8_t(val), val & 0x100));
                     }
                     return;
                 case 5: // shr
                     if (CL > 0) {
                         val >>= CL - 1;
-                        set8(op->opr1, setf8(int8_t(val >> 1), val & 1));
+                        set8(op.opr1, setf8(int8_t(val >> 1), val & 1));
                     }
                     return;
                 case 7: // sar
                     if (CL > 0) {
                         val = int8_t(val) >> (CL - 1);
-                        set8(op->opr1, setf8(val >> 1, val & 1));
+                        set8(op.opr1, setf8(val >> 1, val & 1));
                     }
                     return;
             }
             break;
         case 0xd3: // r/m, cl
-            val = get16(op->opr1);
-            switch ((text[oldip + 1] >> 3) & 7) {
+            val = get16(op.opr1);
+            switch ((mem[oldip + 1] >> 3) & 7) {
                 case 0: // rol
                     for (int i = 0; i < CL; i++) {
                         CF = val & 0x8000;
-                        set16(op->opr1, val = (val << 1) | CF);
+                        set16(op.opr1, val = (val << 1) | CF);
                     }
                     return;
                 case 1: // ror
                     for (int i = 0; i < CL; i++) {
                         CF = val & 1;
-                        set16(op->opr1, val = (val >> 1) | (CF ? 0x8000 : 0));
+                        set16(op.opr1, val = (val >> 1) | (CF ? 0x8000 : 0));
                     }
                     return;
                 case 2: // rcl
                     for (int i = 0; i < CL; i++) {
-                        set16(op->opr1, val = (val << 1) | CF);
+                        set16(op.opr1, val = (val << 1) | CF);
                         CF = val & 0x8000;
                     }
                     return;
                 case 3: // rcr
                     for (int i = 0; i < CL; i++) {
-                        set16(op->opr1, val = (val >> 1) | (CF ? 0x8000 : 0));
+                        set16(op.opr1, val = (val >> 1) | (CF ? 0x8000 : 0));
                         CF = val & 1;
                     }
                     return;
                 case 4: // shl/sal
                     if (CL > 0) {
                         val <<= CL;
-                        set16(op->opr1, setf16(int16_t(val), val & 0x10000));
+                        set16(op.opr1, setf16(int16_t(val), val & 0x10000));
                     }
                     return;
                 case 5: // shr
                     if (CL > 0) {
                         val >>= CL - 1;
-                        set16(op->opr1, setf16(int16_t(val >> 1), val & 1));
+                        set16(op.opr1, setf16(int16_t(val >> 1), val & 1));
                     }
                     return;
                 case 7: // sar
                     if (CL > 0) {
                         val = int16_t(val) >> (CL - 1);
-                        set16(op->opr1, setf16(val >> 1, val & 1));
+                        set16(op.opr1, setf16(val >> 1, val & 1));
                     }
                     return;
             }
@@ -853,35 +834,35 @@ void VM::run1(uint8_t prefix) {
             CF = !CF;
             return;
         case 0xf6:
-            switch ((text[oldip + 1] >> 3) & 7) {
+            switch ((mem[oldip + 1] >> 3) & 7) {
                 case 0: // test r/m, imm8
-                    setf8(int8_t(get8(op->opr1) & opr2), false);
+                    setf8(int8_t(get8(op.opr1) & opr2), false);
                     return;
                 case 2: // not byte r/m
-                    set8(op->opr1, ~get8(op->opr1));
+                    set8(op.opr1, ~get8(op.opr1));
                     return;
                 case 3: // neg byte r/m
-                    src = get8(op->opr1);
-                    set8(op->opr1, setf8(-int8_t(src), src));
+                    src = get8(op.opr1);
+                    set8(op.opr1, setf8(-int8_t(src), src));
                     return;
                 case 4: // mul byte r/m
-                    AX = AL * get8(op->opr1);
+                    AX = AL * get8(op.opr1);
                     OF = CF = AH;
                     return;
                 case 5: // imul byte r/m
-                    AX = int8_t(AL) * int8_t(get8(op->opr1));
+                    AX = int8_t(AL) * int8_t(get8(op.opr1));
                     OF = CF = AH;
                     return;
                 case 6: // div byte r/m
                     dst = AX;
-                    src = get8(op->opr1);
+                    src = get8(op.opr1);
                     AL = dst / src;
                     AH = dst % src;
                     return;
                 case 7:
                 { // idiv byte r/m
                     val = int16_t(AX);
-                    int16_t y = int8_t(get8(op->opr1));
+                    int16_t y = int8_t(get8(op.opr1));
                     AL = val / y;
                     AH = val % y;
                     return;
@@ -889,27 +870,27 @@ void VM::run1(uint8_t prefix) {
             }
             break;
         case 0xf7:
-            switch ((text[oldip + 1] >> 3) & 7) {
+            switch ((mem[oldip + 1] >> 3) & 7) {
                 case 0: // test r/m, imm16
-                    setf16(int16_t(get16(op->opr1) & opr2), false);
+                    setf16(int16_t(get16(op.opr1) & opr2), false);
                     return;
                 case 2: // not r/m
-                    set16(op->opr1, ~get16(op->opr1));
+                    set16(op.opr1, ~get16(op.opr1));
                     return;
                 case 3: // neg r/m
-                    src = get16(op->opr1);
-                    set16(op->opr1, setf16(-int16_t(src), src));
+                    src = get16(op.opr1);
+                    set16(op.opr1, setf16(-int16_t(src), src));
                     return;
                 case 4:
                 { // mul r/m
-                    uint32_t v = AX * get16(op->opr1);
+                    uint32_t v = AX * get16(op.opr1);
                     DX = v >> 16;
                     AX = v;
                     OF = CF = DX;
                     return;
                 }
                 case 5: // imul r/m
-                    val = int16_t(AX) * int16_t(get16(op->opr1));
+                    val = int16_t(AX) * int16_t(get16(op.opr1));
                     DX = val >> 16;
                     AX = val;
                     OF = CF = DX;
@@ -917,7 +898,7 @@ void VM::run1(uint8_t prefix) {
                 case 6:
                 { // div r/m
                     uint32_t x = (DX << 16) | AX;
-                    src = get16(op->opr1);
+                    src = get16(op.opr1);
                     AX = x / src;
                     DX = x % src;
                     return;
@@ -925,7 +906,7 @@ void VM::run1(uint8_t prefix) {
                 case 7:
                 { // idiv r/m
                     int32_t x = (DX << 16) | AX;
-                    int32_t y = int16_t(get16(op->opr1));
+                    int32_t y = int16_t(get16(op.opr1));
                     AX = x / y;
                     DX = x % y;
                     return;
@@ -945,45 +926,45 @@ void VM::run1(uint8_t prefix) {
             DF = true;
             return;
         case 0xfe: // byte r/m
-            switch ((text[oldip + 1] >> 3) & 7) {
+            switch ((mem[oldip + 1] >> 3) & 7) {
                 case 0: // inc
-                    set8(op->opr1, setf8(int8_t(get8(op->opr1)) + 1, CF));
+                    set8(op.opr1, setf8(int8_t(get8(op.opr1)) + 1, CF));
                     return;
                 case 1: // dec
-                    set8(op->opr1, setf8(int8_t(get8(op->opr1)) - 1, CF));
+                    set8(op.opr1, setf8(int8_t(get8(op.opr1)) - 1, CF));
                     return;
             }
             break;
         case 0xff: // r/m
-            switch ((text[oldip + 1] >> 3) & 7) {
+            switch ((mem[oldip + 1] >> 3) & 7) {
                 case 0: // inc
-                    set16(op->opr1, setf16(int16_t(get16(op->opr1)) + 1, CF));
+                    set16(op.opr1, setf16(int16_t(get16(op.opr1)) + 1, CF));
                     return;
                 case 1: // dec
-                    set16(op->opr1, setf16(int16_t(get16(op->opr1)) - 1, CF));
+                    set16(op.opr1, setf16(int16_t(get16(op.opr1)) - 1, CF));
                     return;
                 case 2: // call
                     SP -= 2;
                     write16(SP, ip);
-                    ip = get16(op->opr1);
+                    ip = get16(op.opr1);
                     return;
                 case 3: // callf
                     break;
                 case 4: // jmp
-                    ip = get16(op->opr1);
+                    ip = get16(op.opr1);
                     return;
                 case 5: // jmpf
                     break;
                 case 6: // push
                     SP -= 2;
-                    write16(SP, get16(op->opr1));
+                    write16(SP, get16(op.opr1));
                     return;
             }
             break;
     }
     if (trace < 2 && !prefix) {
         fprintf(stderr, header);
-        debug(oldip, *op);
+        debug(oldip, op);
     }
     fprintf(stderr, "not implemented\n");
 }

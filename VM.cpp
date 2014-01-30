@@ -5,6 +5,8 @@
 #include <string.h>
 #include <sys/stat.h>
 
+int trace;
+
 const char *header = " AX   BX   CX   DX   SP   BP   SI   DI  FLAGS IP\n";
 
 bool VM::ptable[256];
@@ -14,12 +16,11 @@ void VM::showHeader() {
 }
 
 void VM::debug(uint16_t ip, const OpCode &op) {
-    debugsym(ip);
     fprintf(stderr,
             "%04x %04x %04x %04x %04x %04x %04x %04x %c%c%c%c %04x:%-12s %s",
             r[0], r[3], r[1], r[2], r[4], r[5], r[6], r[7],
             "-O"[OF], "-S"[SF], "-Z"[ZF], "-C"[CF],
-            ip, hexdump(text + ip, op.len).c_str(), op.str().c_str());
+            ip, hexdump(mem + ip, op.len).c_str(), op.str().c_str());
     if (trace >= 3) {
         int ad1 = addr(op.opr1);
         int ad2 = addr(op.opr2);
@@ -67,34 +68,14 @@ void VM::init() {
     }
 }
 
-VM::VM() : ip(0), start_sp(0) {
+VM::VM() : mem(NULL), hasExited(false), ip(0), start_sp(0) {
     init();
     memset(r, 0, sizeof (r));
     OF = DF = SF = ZF = PF = CF = false;
 }
 
-VM::VM(const VM &vm) : VMBase(vm) {
-    init();
-    memcpy(r, vm.r, sizeof (r));
-    ip = vm.ip;
-    OF = vm.OF;
-    DF = vm.DF;
-    SF = vm.SF;
-    ZF = vm.ZF;
-    PF = vm.PF;
-    CF = vm.CF;
-    start_sp = vm.start_sp;
-    cache = vm.cache;
-}
-
 VM::~VM() {
-}
-
-bool VM::load(const std::string& fn, FILE* f, size_t size) {
-    if (!VMBase::load(fn, f, size)) return false;
-    ip = 0;
-    cache.clear();
-    return true;
+    if (mem) delete[] mem;
 }
 
 int VM::addr(const Operand &opr) {
@@ -114,33 +95,4 @@ int VM::addr(const Operand &opr) {
 
 void VM::run2() {
     while (!hasExited) run1();
-}
-
-void VM::disasm() {
-    int addr = 0, undef = 0;
-    while (addr < (int) tsize) {
-        showsym(addr);
-        OpCode op = disasm1(text, addr, tsize);
-        disout(text, addr, op.len, disstr(op));
-        if (op.undef()) undef++;
-        addr += op.len;
-    }
-    if (undef) printf("undefined: %d\n", undef);
-}
-
-std::string VM::disstr(const OpCode &op) {
-    std::string ret = op.str();
-    if (op.opr1.type == Addr) {
-        std::map<int, Symbol>::iterator it = syms[1].find(op.opr1.value);
-        if (it != syms[1].end()) {
-            ret += " ; " + it->second.name;
-        }
-    }
-    if (op.opr2.type == Addr) {
-        std::map<int, Symbol>::iterator it = syms[1].find(op.opr2.value);
-        if (it != syms[1].end()) {
-            ret += " ; " + it->second.name;
-        }
-    }
-    return ret;
 }

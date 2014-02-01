@@ -339,22 +339,6 @@ OpCode disasm(uint8_t *text, uint16_t addr) {
         case 0xd5: if (mem[1] == 0x0a) return getop(2, "aad");
             else break;
         case 0xd7: return getop(1, "xlat");
-#if 0
-        case 0xd8:
-        case 0xd9:
-        case 0xda:
-        case 0xdb:
-        case 0xdc:
-        case 0xdd:
-        case 0xde:
-        case 0xdf:
-        {
-            OpCode op = modrm(mem, "esc", false);
-            op.opr2 = Operand(0, true, Addr, (b << 16) | ((mem[1] >> 3) & 7));
-            swap(&op);
-            return op;
-        }
-#endif
         case 0xe0: return getop(2, "loopnz", disp8(mem + 1, addr + 1));
         case 0xe1: return getop(2, "loopz", disp8(mem + 1, addr + 1));
         case 0xe2: return getop(2, "loop", disp8(mem + 1, addr + 1));

@@ -21,152 +21,106 @@
 #define DH *r8[6]
 #define BH *r8[7]
 
-struct VM {
-    uint8_t *mem;
-    bool hasExited;
+uint8_t mem[0x11000];
+bool hasExited;
 
-    uint16_t ip, r[8];
-    uint8_t * r8[8];
-    bool OF, DF, SF, ZF, PF, CF;
-    uint16_t start_sp;
+uint16_t ip, r[8];
+uint8_t * r8[8];
+bool OF, DF, SF, ZF, PF, CF;
+uint16_t start_sp;
 
-    static bool ptable[256];
-    void init();
+bool ptable[256];
 
-    VM();
-    virtual ~VM();
+inline uint8_t read8(uint16_t addr) {
+    return mem[addr];
+}
 
-    inline uint8_t read8(uint16_t addr) {
-        return mem[addr];
+inline uint16_t read16(uint16_t addr) {
+    return ::read16(mem + addr);
+}
+
+inline uint32_t read32(uint16_t addr) {
+    return ::read32(mem + addr);
+}
+
+inline void write8(uint16_t addr, uint8_t value) {
+    mem[addr] = value;
+}
+
+inline void write16(uint16_t addr, uint16_t value) {
+    mem[addr] = value;
+    mem[addr + 1] = value >> 8;
+}
+
+inline void write32(uint16_t addr, uint32_t value) {
+    mem[addr] = value;
+    mem[addr + 1] = value >> 8;
+    mem[addr + 2] = value >> 16;
+    mem[addr + 3] = value >> 24;
+}
+
+void run2();
+
+void run1(uint8_t prefix = 0);
+int addr(const Operand &opr);
+
+inline int setf8(int value, bool cf) {
+    int8_t v = value;
+    OF = value != v;
+    SF = v < 0;
+    ZF = v == 0;
+    PF = ptable[uint8_t(value)];
+    CF = cf;
+    return value;
+}
+
+inline int setf16(int value, bool cf) {
+    int16_t v = value;
+    OF = value != v;
+    SF = v < 0;
+    ZF = v == 0;
+    PF = ptable[uint8_t(value)];
+    CF = cf;
+    return value;
+}
+
+inline uint8_t get8(const Operand &opr) {
+    switch (opr.type) {
+        case Reg: return *r8[opr.value];
+        case Imm: return opr.value;
     }
+    int ad = addr(opr);
+    return ad < 0 ? 0 : read8(ad);
+}
 
-    inline uint16_t read16(uint16_t addr) {
-        return ::read16(mem + addr);
+inline uint16_t get16(const Operand &opr) {
+    switch (opr.type) {
+        case Reg: return r[opr.value];
+        case Imm: return opr.value;
     }
+    int ad = addr(opr);
+    return ad < 0 ? 0 : read16(ad);
+}
 
-    inline uint32_t read32(uint16_t addr) {
-        return ::read32(mem + addr);
-    }
-
-    inline void write8(uint16_t addr, uint8_t value) {
-        mem[addr] = value;
-    }
-
-    inline void write16(uint16_t addr, uint16_t value) {
-        mem[addr] = value;
-        mem[addr + 1] = value >> 8;
-    }
-
-    inline void write32(uint16_t addr, uint32_t value) {
-        mem[addr] = value;
-        mem[addr + 1] = value >> 8;
-        mem[addr + 2] = value >> 16;
-        mem[addr + 3] = value >> 24;
-    }
-
-    void run2();
-
-    void run1(uint8_t prefix = 0);
-    int addr(const Operand &opr);
-
-    inline int setf8(int value, bool cf) {
-        int8_t v = value;
-        OF = value != v;
-        SF = v < 0;
-        ZF = v == 0;
-        PF = ptable[uint8_t(value)];
-        CF = cf;
-        return value;
-    }
-
-    inline int setf16(int value, bool cf) {
-        int16_t v = value;
-        OF = value != v;
-        SF = v < 0;
-        ZF = v == 0;
-        PF = ptable[uint8_t(value)];
-        CF = cf;
-        return value;
-    }
-
-    inline uint8_t get8(const Operand &opr) {
-        switch (opr.type) {
-            case Reg: return *r8[opr.value];
-            case Imm: return opr.value;
-        }
-        int ad = addr(opr);
-        return ad < 0 ? 0 : read8(ad);
-    }
-
-    inline uint16_t get16(const Operand &opr) {
-        switch (opr.type) {
-            case Reg: return r[opr.value];
-            case Imm: return opr.value;
-        }
-        int ad = addr(opr);
-        return ad < 0 ? 0 : read16(ad);
-    }
-
-    inline void set8(const Operand &opr, uint8_t value) {
-        if (opr.type == Reg) {
-            *r8[opr.value] = value;
-        } else {
-            int ad = addr(opr);
-            if (ad >= 0) write8(ad, value);
-        }
-    }
-
-    inline void set16(const Operand &opr, uint16_t value) {
-        if (opr.type == Reg) {
-            r[opr.value] = value;
-        } else {
-            int ad = addr(opr);
-            if (ad >= 0) write16(ad, value);
-        }
-    }
-};
-
-bool VM::ptable[256];
-
-static bool initialized;
-
-void VM::init() {
-    if (!initialized) {
-        for (int i = 0; i < 256; i++) {
-            int n = 0;
-            for (int j = 1; j < 256; j += j) {
-                if (i & j) n++;
-            }
-            ptable[i] = (n & 1) == 0;
-        }
-        initialized = true;
-    }
-    uint16_t tmp = 0x1234;
-    uint8_t *p = (uint8_t *) r;
-    if (*(uint8_t *) & tmp == 0x34) {
-        for (int i = 0; i < 4; i++) {
-            r8[i] = p + i * 2;
-            r8[i + 4] = r8[i] + 1;
-        }
+inline void set8(const Operand &opr, uint8_t value) {
+    if (opr.type == Reg) {
+        *r8[opr.value] = value;
     } else {
-        for (int i = 0; i < 4; i++) {
-            r8[i] = p + i * 2 + 1;
-            r8[i + 4] = r8[i] - 1;
-        }
+        int ad = addr(opr);
+        if (ad >= 0) write8(ad, value);
     }
 }
 
-VM::VM() : mem(NULL), hasExited(false), ip(0), start_sp(0) {
-    init();
-    memset(r, 0, sizeof (r));
-    OF = DF = SF = ZF = PF = CF = false;
+inline void set16(const Operand &opr, uint16_t value) {
+    if (opr.type == Reg) {
+        r[opr.value] = value;
+    } else {
+        int ad = addr(opr);
+        if (ad >= 0) write16(ad, value);
+    }
 }
 
-VM::~VM() {
-    if (mem) delete[] mem;
-}
-
-int VM::addr(const Operand &opr) {
+int addr(const Operand &opr) {
     switch (opr.type) {
         case Ptr: return uint16_t(opr.value);
         case ModRM + 0: return uint16_t(BX + SI + opr.value);
@@ -181,11 +135,11 @@ int VM::addr(const Operand &opr) {
     return -1;
 }
 
-void VM::run2() {
+void run2() {
     while (!hasExited) run1();
 }
 
-void VM::run1(uint8_t prefix) {
+void run1(uint8_t prefix) {
     OpCode op = disasm1(mem, ip, 0x10000);
     int opr1 = op.opr1.value, opr2 = op.opr2.value;
     uint8_t b = mem[ip];
@@ -1147,4 +1101,24 @@ void VM::run1(uint8_t prefix) {
 }
 
 int main() {
+    for (int i = 0; i < 256; i++) {
+        int n = 0;
+        for (int j = 1; j < 256; j += j) {
+            if (i & j) n++;
+        }
+        ptable[i] = (n & 1) == 0;
+    }
+    uint16_t tmp = 0x1234;
+    uint8_t *p = (uint8_t *) r;
+    if (*(uint8_t *) & tmp == 0x34) {
+        for (int i = 0; i < 4; i++) {
+            r8[i] = p + i * 2;
+            r8[i + 4] = r8[i] + 1;
+        }
+    } else {
+        for (int i = 0; i < 4; i++) {
+            r8[i] = p + i * 2 + 1;
+            r8[i + 4] = r8[i] - 1;
+        }
+    }
 }

@@ -90,7 +90,7 @@ inline Operand disp16(uint8_t *mem, uint16_t addr) {
     return getopr(2, true, Addr, (uint16_t) (addr + 2 + (int16_t) read16(mem)));
 }
 
-// OpCode
+// disasm
 
 inline size_t getop(
         Operand *r1, Operand *r2,
@@ -102,25 +102,27 @@ inline size_t getop(
     return len;
 }
 
-// disasm
-
-inline Operand modrm(uint8_t *mem, bool w) {
+inline size_t modrm(Operand *opr1, Operand *opr2, uint8_t *mem, const char *mne, bool w) {
+    Operand opr;
     uint8_t b = mem[1], mod = b >> 6, rm = b & 7;
     switch (mod) {
         case 0:
-            if (rm == 6) return getopr(3, w, Ptr, read16(mem + 2));
-            return getopr(1, w, ModRM + rm, 0);
+            if (rm == 6) {
+                opr = getopr(3, w, Ptr, read16(mem + 2));
+            } else {
+                opr = getopr(1, w, ModRM + rm, 0);
+            }
+            break;
         case 1:
-            return getopr(2, w, ModRM + rm, (int8_t) mem[2]);
+            opr = getopr(2, w, ModRM + rm, (int8_t) mem[2]);
+            break;
         case 2:
-            return getopr(3, w, ModRM + rm, (int16_t) read16(mem + 2));
+            opr = getopr(3, w, ModRM + rm, (int16_t) read16(mem + 2));
+            break;
         default:
-            return getopr(1, w, Reg, rm);
+            opr = getopr(1, w, Reg, rm);
+            break;
     }
-}
-
-inline size_t modrm(Operand *opr1, Operand *opr2, uint8_t *mem, const char *mne, bool w) {
-    Operand opr = modrm(mem, w);
     return getop(opr1, opr2, 1 + opr.len, mne, opr);
 }
 
@@ -428,6 +430,8 @@ size_t disasm(Operand *opr1, Operand *opr2, uint8_t *p) {
     *opr2 = noopr;
     return 1;
 }
+
+// run
 
 int addr(const Operand &opr) {
     switch (opr.type) {

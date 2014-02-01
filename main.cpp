@@ -22,14 +22,25 @@
 #define BH *r8[7]
 
 uint8_t mem[0x11000];
-bool hasExited;
-
 uint16_t ip, r[8];
-uint8_t * r8[8];
+uint8_t *r8[8];
 bool OF, DF, SF, ZF, PF, CF;
-uint16_t start_sp;
-
 bool ptable[256];
+
+int addr(const Operand &opr) {
+    switch (opr.type) {
+        case Ptr: return uint16_t(opr.value);
+        case ModRM + 0: return uint16_t(BX + SI + opr.value);
+        case ModRM + 1: return uint16_t(BX + DI + opr.value);
+        case ModRM + 2: return uint16_t(BP + SI + opr.value);
+        case ModRM + 3: return uint16_t(BP + DI + opr.value);
+        case ModRM + 4: return uint16_t(SI + opr.value);
+        case ModRM + 5: return uint16_t(DI + opr.value);
+        case ModRM + 6: return uint16_t(BP + opr.value);
+        case ModRM + 7: return uint16_t(BX + opr.value);
+    }
+    return -1;
+}
 
 inline uint8_t read8(uint16_t addr) {
     return mem[addr];
@@ -58,11 +69,6 @@ inline void write32(uint16_t addr, uint32_t value) {
     mem[addr + 2] = value >> 16;
     mem[addr + 3] = value >> 24;
 }
-
-void run2();
-
-void run1(uint8_t prefix = 0);
-int addr(const Operand &opr);
 
 inline int setf8(int value, bool cf) {
     int8_t v = value;
@@ -118,25 +124,6 @@ inline void set16(const Operand &opr, uint16_t value) {
         int ad = addr(opr);
         if (ad >= 0) write16(ad, value);
     }
-}
-
-int addr(const Operand &opr) {
-    switch (opr.type) {
-        case Ptr: return uint16_t(opr.value);
-        case ModRM + 0: return uint16_t(BX + SI + opr.value);
-        case ModRM + 1: return uint16_t(BX + DI + opr.value);
-        case ModRM + 2: return uint16_t(BP + SI + opr.value);
-        case ModRM + 3: return uint16_t(BP + DI + opr.value);
-        case ModRM + 4: return uint16_t(SI + opr.value);
-        case ModRM + 5: return uint16_t(DI + opr.value);
-        case ModRM + 6: return uint16_t(BP + opr.value);
-        case ModRM + 7: return uint16_t(BX + opr.value);
-    }
-    return -1;
-}
-
-void run2() {
-    while (!hasExited) run1();
 }
 
 void run1(uint8_t prefix) {
@@ -750,10 +737,6 @@ void run1(uint8_t prefix) {
             SP += 2 + opr1;
             return;
         case 0xc3: // ret
-            if (SP == start_sp) {
-                hasExited = true;
-                return;
-            }
             ip = read16(SP);
             SP += 2;
             return;

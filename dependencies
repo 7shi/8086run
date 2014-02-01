@@ -1,2 +1,0 @@
-./main.o: main.cpp disasm.h
-./disasm.o: disasm.cpp disasm.h

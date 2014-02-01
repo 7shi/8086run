@@ -2,8 +2,8 @@ TARGET   = 8086run
 CXX      = g++
 CXXFLAGS = -Wall -g
 LDFLAGS  =
+SOURCES  = main.cpp
 OBJECTS  = $(SOURCES:%.cpp=%.o)
-SOURCES = main.cpp disasm.cpp
 
 all: $(TARGET)
 
@@ -16,12 +16,3 @@ $(TARGET): $(OBJECTS)
 
 clean:
 	rm -f $(TARGET) $(TARGET).exe $(OBJECTS) *core
-
-depend:
-	rm -f dependencies
-	for cpp in $(SOURCES); do \
-	  (echo -n `dirname $$cpp`/; \
-	   g++ -MM $(CXXFLAGS) $$cpp) >> dependencies; \
-	done
-
--include dependencies

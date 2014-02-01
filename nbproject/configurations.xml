@@ -2,13 +2,9 @@
 <configurationDescriptor version="89">
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
     <df root="." name="8086run">
-      <in>VM.cpp</in>
-      <in>VM.h</in>
-      <in>VM.inst.cpp</in>
       <in>disasm.cpp</in>
       <in>disasm.h</in>
       <in>main.cpp</in>
-      <in>regs.h</in>
     </df>
     <logicalFolder name="ExternalFiles"
                    displayName="重要なファイル"
@@ -45,19 +41,11 @@
           </ccTool>
         </makeTool>
       </makefileType>
-      <item path="VM.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="VM.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="VM.inst.cpp" ex="false" tool="1" flavor2="0">
-      </item>
       <item path="disasm.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="disasm.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="regs.h" ex="false" tool="3" flavor2="0">
       </item>
     </conf>
   </confs>

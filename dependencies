@@ -1,4 +1,2 @@
-./main.o: main.cpp
-./VM.o: VM.cpp VM.h disasm.h regs.h
-./VM.inst.o: VM.inst.cpp VM.h disasm.h regs.h
+./main.o: main.cpp disasm.h
 ./disasm.o: disasm.cpp disasm.h

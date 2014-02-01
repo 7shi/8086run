@@ -6,7 +6,6 @@
 void VM::run1(uint8_t prefix) {
     OpCode op = disasm1(mem, ip, 0x10000);
     int opr1 = op.opr1.value, opr2 = op.opr2.value;
-    if (trace >= 2 && !prefix) debug(ip, op);
     uint8_t b = mem[ip];
     uint16_t oldip = ip;
     int dst, src, val;
@@ -961,10 +960,6 @@ void VM::run1(uint8_t prefix) {
                     return;
             }
             break;
-    }
-    if (trace < 2 && !prefix) {
-        fprintf(stderr, header);
-        debug(oldip, op);
     }
     fprintf(stderr, "not implemented\n");
 }

@@ -8,12 +8,7 @@ struct OpCode {
     const char *mne;
     Operand opr1, opr2;
 
-    inline bool empty() const {
-        return len == 0;
-    }
-
     bool undef() const;
-    std::string str() const;
     void swap();
 };
 

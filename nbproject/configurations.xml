@@ -13,8 +13,6 @@
       <in>disasm.h</in>
       <in>main.cpp</in>
       <in>regs.h</in>
-      <in>utils.cpp</in>
-      <in>utils.h</in>
     </df>
     <logicalFolder name="ExternalFiles"
                    displayName="重要なファイル"
@@ -72,10 +70,6 @@
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="regs.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="utils.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="utils.h" ex="false" tool="3" flavor2="0">
       </item>
     </conf>
   </confs>

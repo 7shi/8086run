@@ -1,13 +1,10 @@
 #pragma once
 #include "OpCode.h"
 
-extern int trace;
-extern const char *header;
-
 struct VM {
     uint8_t *mem;
     bool hasExited;
-    
+
     uint16_t ip, r[8];
     uint8_t * r8[8];
     bool OF, DF, SF, ZF, PF, CF;
@@ -36,18 +33,20 @@ struct VM {
     }
 
     inline void write16(uint16_t addr, uint16_t value) {
-        ::write16(mem + addr, value);
+        mem[addr] = value;
+        mem[addr + 1] = value >> 8;
     }
 
     inline void write32(uint16_t addr, uint32_t value) {
-        ::write32(mem + addr, value);
+        mem[addr] = value;
+        mem[addr + 1] = value >> 8;
+        mem[addr + 2] = value >> 16;
+        mem[addr + 3] = value >> 24;
     }
 
-    void showHeader();
     void run2();
 
     void run1(uint8_t prefix = 0);
-    void debug(uint16_t ip, const OpCode &op);
     int addr(const Operand &opr);
 
     inline int setf8(int value, bool cf) {

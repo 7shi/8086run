@@ -1,10 +1,6 @@
 #include "disasm.h"
 #include <stdio.h>
 
-std::string regs8 [] = {"al", "cl", "dl", "bl", "ah", "ch", "dh", "bh"};
-std::string regs16[] = {"ax", "cx", "dx", "bx", "sp", "bp", "si", "di"};
-std::string sregs [] = {"es", "cs", "ss", "ds"};
-
 static inline Operand modrm(uint8_t *mem, bool w) {
     uint8_t b = mem[1], mod = b >> 6, rm = b & 7;
     switch (mod) {

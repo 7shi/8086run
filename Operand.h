@@ -1,6 +1,13 @@
 #pragma once
-#include "utils.h"
 #include <string>
+
+inline uint16_t read16(uint8_t *mem) {
+    return mem[0] | (mem[1] << 8);
+}
+
+inline uint32_t read32(uint8_t *mem) {
+    return mem[0] | (mem[1] << 8) | (mem[2] << 16) | (mem[3] << 24);
+}
 
 enum OperandType {
     Reg, SReg, Imm, Addr, Far, Ptr, ModRM
@@ -14,8 +21,6 @@ struct Operand {
     inline bool empty() const {
         return len < 0;
     }
-
-    std::string str() const;
 };
 
 inline Operand getopr(int len, bool w, int type, int value, int seg = -1) {

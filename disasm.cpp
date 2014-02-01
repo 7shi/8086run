@@ -8,13 +8,13 @@ inline Operand getopr(int len, bool w, int type, int value, int seg = -1) {
     return ret;
 }
 
-static Operand noopr = getopr(-1, false, 0, 0);
-static Operand dx = getopr(0, true, Reg, 2);
-static Operand cl = getopr(0, false, Reg, 1);
-static Operand es = getopr(0, true, SReg, 0);
-static Operand cs = getopr(0, true, SReg, 1);
-static Operand ss = getopr(0, true, SReg, 2);
-static Operand ds = getopr(0, true, SReg, 3);
+Operand noopr = getopr(-1, false, 0, 0);
+Operand dx = getopr(0, true, Reg, 2);
+Operand cl = getopr(0, false, Reg, 1);
+Operand es = getopr(0, true, SReg, 0);
+Operand cs = getopr(0, true, SReg, 1);
+Operand ss = getopr(0, true, SReg, 2);
+Operand ds = getopr(0, true, SReg, 3);
 
 inline Operand reg(int r, bool w) {
     return getopr(0, w, Reg, r);
@@ -46,7 +46,7 @@ inline Operand disp16(uint8_t *mem, uint16_t addr) {
 
 // OpCode
 
-static inline size_t getop(
+inline size_t getop(
         Operand *r1, Operand *r2,
         size_t len, const char *mne,
         const Operand &opr1 = noopr,
@@ -58,7 +58,7 @@ static inline size_t getop(
 
 // disasm
 
-static inline Operand modrm(uint8_t *mem, bool w) {
+inline Operand modrm(uint8_t *mem, bool w) {
     uint8_t b = mem[1], mod = b >> 6, rm = b & 7;
     switch (mod) {
         case 0:
@@ -73,12 +73,12 @@ static inline Operand modrm(uint8_t *mem, bool w) {
     }
 }
 
-static inline size_t modrm(Operand *opr1, Operand *opr2, uint8_t *mem, const char *mne, bool w) {
+inline size_t modrm(Operand *opr1, Operand *opr2, uint8_t *mem, const char *mne, bool w) {
     Operand opr = modrm(mem, w);
     return getop(opr1, opr2, 1 + opr.len, mne, opr);
 }
 
-static inline size_t regrm(Operand *opr1, Operand *opr2, uint8_t *mem, const char *mne, bool d, int w) {
+inline size_t regrm(Operand *opr1, Operand *opr2, uint8_t *mem, const char *mne, bool d, int w) {
     size_t len = modrm(opr1, opr2, mem, mne, w);
     if (w == 2) {
         *opr2 = getopr(0, w, SReg, (mem[1] >> 3) & 3);
@@ -93,7 +93,7 @@ static inline size_t regrm(Operand *opr1, Operand *opr2, uint8_t *mem, const cha
     return len;
 }
 
-static inline size_t aimm(Operand *opr1, Operand *opr2, uint8_t *mem, const char *mne) {
+inline size_t aimm(Operand *opr1, Operand *opr2, uint8_t *mem, const char *mne) {
     return *mem & 1 ?
             getop(opr1, opr2, 3, mne, reg(0, true), imm16(read16(mem + 1))) :
             getop(opr1, opr2, 2, mne, reg(0, false), imm8(mem[1]));

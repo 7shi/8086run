@@ -53,12 +53,6 @@ struct OpCode {
 
 OpCode undefop = {1, noopr, noopr};
 
-static inline void swap(OpCode *op) {
-    Operand tmp = op->opr1;
-    op->opr1 = op->opr2;
-    op->opr2 = tmp;
-}
-
 static inline OpCode getop(
         size_t len, const char *mne,
         const Operand &opr1 = noopr,
@@ -96,7 +90,11 @@ static inline OpCode regrm(uint8_t *mem, const char *mne, bool d, int w) {
     } else {
         op.opr2 = getopr(0, w, Reg, (mem[1] >> 3) & 7);
     }
-    if (d) swap(&op);
+    if (d) {
+        Operand tmp = op.opr1;
+        op.opr1 = op.opr2;
+        op.opr2 = tmp;
+    }
     return op;
 }
 

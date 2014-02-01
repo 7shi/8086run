@@ -419,24 +419,8 @@ OpCode disasm1(uint8_t *text, uint16_t addr) {
 }
 
 size_t disasm1(Operand *opr1, Operand *opr2, uint8_t *text, uint16_t addr) {
-    OpCode op1 = disasm1(text, addr), *ret = &op1;
-    uint16_t addr2 = addr + op1.len;
-    if (op1.prefix) {
-        OpCode op2 = disasm1(text, addr2);
-        if (!op2.prefix) {
-            op2.len += op1.len;
-            if (!op1.opr2.empty()) {
-                if (op2.opr1.type >= Ptr) {
-                    op2.opr1.seg = op1.opr2.value;
-                    ret = &op2;
-                } else if (op2.opr2.type >= Ptr) {
-                    op2.opr2.seg = op1.opr2.value;
-                    ret = &op2;
-                }
-            }
-        }
-    }
-    *opr1 = ret->opr1;
-    *opr2 = ret->opr2;
-    return ret->len;
+    OpCode op = disasm1(text, addr);
+    *opr1 = op.opr1;
+    *opr2 = op.opr2;
+    return op.len;
 }

@@ -126,7 +126,7 @@ inline void set16(const Operand &opr, uint16_t value) {
     }
 }
 
-void run1(uint8_t prefix) {
+void run1(uint8_t rep, uint8_t seg) {
     Operand opr1, opr2;
     size_t oplen = disasm1(&opr1, &opr2, mem, ip);
     int opr1v = opr1.value, opr2v = opr2.value;
@@ -243,6 +243,8 @@ void run1(uint8_t prefix) {
         case 0x25: // and ax, imm16
             AX = setf16(int16_t(AX & opr2v), false);
             return;
+        case 0x26: // es:
+            return run1(0, b);
         case 0x28: // sub r/m, reg8
             val = int8_t(dst = get8(opr1)) - int8_t(src = *r8[opr2v]);
             set8(opr1, setf8(val, dst < src));
@@ -267,6 +269,8 @@ void run1(uint8_t prefix) {
             val = int16_t(dst = AX) - int16_t(src = opr2v);
             AX = setf16(val, dst < src);
             return;
+        case 0x2e: // cs:
+            return run1(0, b);
         case 0x30: // xor r/m, reg8
             set8(opr1, setf8(int8_t(get8(opr1) ^ *r8[opr2v]), false));
             return;
@@ -285,6 +289,8 @@ void run1(uint8_t prefix) {
         case 0x35: // xor ax, imm16
             AX = setf16(int16_t(AX ^ opr2v), false);
             return;
+        case 0x36: // ss:
+            return run1(0, b);
         case 0x38: // cmp r/m, reg8
             val = int8_t(dst = get8(opr1)) - int8_t(src = *r8[opr2v]);
             setf8(val, dst < src);
@@ -309,6 +315,8 @@ void run1(uint8_t prefix) {
             val = int16_t(dst = AX) - int16_t(src = opr2v);
             setf16(val, dst < src);
             return;
+        case 0x3e: // ds:
+            return run1(0, b);
         case 0x40: // inc reg16
         case 0x41:
         case 0x42:
@@ -613,8 +621,8 @@ void run1(uint8_t prefix) {
                     SI++;
                     DI++;
                 }
-                if (prefix) CX--;
-            } while ((prefix == 0xf2 || prefix == 0xf3) && CX);
+                if (rep) CX--;
+            } while ((rep == 0xf2 || rep == 0xf3) && CX);
             return;
         case 0xa5: // movsw
             do {
@@ -626,8 +634,8 @@ void run1(uint8_t prefix) {
                     SI += 2;
                     DI += 2;
                 }
-                if (prefix) CX--;
-            } while ((prefix == 0xf2 || prefix == 0xf3) && CX);
+                if (rep) CX--;
+            } while ((rep == 0xf2 || rep == 0xf3) && CX);
             return;
         case 0xa6: // cmpsb
             do {
@@ -640,8 +648,8 @@ void run1(uint8_t prefix) {
                     SI++;
                     DI++;
                 }
-                if (prefix) CX--;
-            } while (((prefix == 0xf2 && !ZF) || (prefix == 0xf3 && ZF)) && CX);
+                if (rep) CX--;
+            } while (((rep == 0xf2 && !ZF) || (rep == 0xf3 && ZF)) && CX);
             return;
         case 0xa7: // cmpsw
             do {
@@ -654,8 +662,8 @@ void run1(uint8_t prefix) {
                     SI += 2;
                     DI += 2;
                 }
-                if (prefix) CX--;
-            } while (((prefix == 0xf2 && !ZF) || (prefix == 0xf3 && ZF)) && CX);
+                if (rep) CX--;
+            } while (((rep == 0xf2 && !ZF) || (rep == 0xf3 && ZF)) && CX);
             return;
         case 0xa8: // test al, imm8
             setf8(int8_t(AL & opr2v), false);
@@ -668,32 +676,32 @@ void run1(uint8_t prefix) {
                 write8(DI, AL);
                 if (DF) DI--;
                 else DI++;
-                if (prefix) CX--;
-            } while ((prefix == 0xf2 || prefix == 0xf3) && CX);
+                if (rep) CX--;
+            } while ((rep == 0xf2 || rep == 0xf3) && CX);
             return;
         case 0xab: // stosw
             do {
                 write16(DI, AX);
                 if (DF) DI -= 2;
                 else DI += 2;
-                if (prefix) CX--;
-            } while ((prefix == 0xf2 || prefix == 0xf3) && CX);
+                if (rep) CX--;
+            } while ((rep == 0xf2 || rep == 0xf3) && CX);
             return;
         case 0xac: // lodsb
             do {
                 AL = read8(SI);
                 if (DF) SI--;
                 else SI++;
-                if (prefix) CX--;
-            } while ((prefix == 0xf2 || prefix == 0xf3) && CX);
+                if (rep) CX--;
+            } while ((rep == 0xf2 || rep == 0xf3) && CX);
             return;
         case 0xad: // lodsw
             do {
                 AX = read16(SI);
                 if (DF) SI -= 2;
                 else SI += 2;
-                if (prefix) CX--;
-            } while ((prefix == 0xf2 || prefix == 0xf3) && CX);
+                if (rep) CX--;
+            } while ((rep == 0xf2 || rep == 0xf3) && CX);
             return;
         case 0xae: // scasb
             do {
@@ -701,8 +709,8 @@ void run1(uint8_t prefix) {
                 setf8(val, AL < src);
                 if (DF) DI--;
                 else DI++;
-                if (prefix) CX--;
-            } while (((prefix == 0xf2 && !ZF) || (prefix == 0xf3 && ZF)) && CX);
+                if (rep) CX--;
+            } while (((rep == 0xf2 && !ZF) || (rep == 0xf3 && ZF)) && CX);
             return;
         case 0xaf: // scasw
             do {
@@ -710,8 +718,8 @@ void run1(uint8_t prefix) {
                 setf16(val, AX < src);
                 if (DF) DI -= 2;
                 else DI += 2;
-                if (prefix) CX--;
-            } while (((prefix == 0xf2 && !ZF) || (prefix == 0xf3 && ZF)) && CX);
+                if (rep) CX--;
+            } while (((rep == 0xf2 && !ZF) || (rep == 0xf3 && ZF)) && CX);
             return;
         case 0xb0: // mov reg8, imm8
         case 0xb1:
@@ -946,7 +954,7 @@ void run1(uint8_t prefix) {
         case 0xf3: // rep/repz/repe
             if (CX) {
                 ip = oldip + 1;
-                run1(b);
+                run1(b, 0);
             }
             return;
         case 0xf5: // cmc

@@ -1,6 +1,5 @@
 ./main.o: main.cpp
-./OpCode.o: OpCode.cpp OpCode.h Operand.h
-./Operand.o: Operand.cpp Operand.h disasm.h OpCode.h
-./VM.o: VM.cpp VM.h OpCode.h Operand.h disasm.h regs.h
-./VM.inst.o: VM.inst.cpp VM.h OpCode.h Operand.h disasm.h regs.h
-./disasm.o: disasm.cpp disasm.h OpCode.h Operand.h
+./Operand.o: Operand.cpp Operand.h disasm.h
+./VM.o: VM.cpp VM.h disasm.h Operand.h regs.h
+./VM.inst.o: VM.inst.cpp VM.h disasm.h Operand.h regs.h
+./disasm.o: disasm.cpp disasm.h Operand.h

@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <stdint.h>
 
 inline uint16_t read16(uint8_t *mem) {
     return mem[0] | (mem[1] << 8);

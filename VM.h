@@ -1,5 +1,5 @@
 #pragma once
-#include "OpCode.h"
+#include "disasm.h"
 
 struct VM {
     uint8_t *mem;

@@ -1,6 +1,28 @@
 #include "disasm.h"
 #include <stdio.h>
 
+OpCode undefop = {NULL, 1, noopr, noopr};
+
+static inline void swap(OpCode *op) {
+    Operand tmp = op->opr1;
+    op->opr1 = op->opr2;
+    op->opr2 = tmp;
+}
+
+static inline OpCode getop(
+        size_t len, const char *mne,
+        const Operand &opr1 = noopr,
+        const Operand &opr2 = noopr) {
+    OpCode ret = {NULL, len, opr1, opr2};
+    return ret;
+}
+
+static inline OpCode getop(
+        const char *mne, const Operand &opr = noopr) {
+    OpCode ret = {mne, 1, noopr, opr};
+    return ret;
+}
+
 static inline Operand modrm(uint8_t *mem, bool w) {
     uint8_t b = mem[1], mod = b >> 6, rm = b & 7;
     switch (mod) {
@@ -28,7 +50,7 @@ static inline OpCode regrm(uint8_t *mem, const char *mne, bool d, int w) {
     } else {
         op.opr2 = getopr(0, w, Reg, (mem[1] >> 3) & 7);
     }
-    if (d) op.swap();
+    if (d) swap(&op);
     return op;
 }
 
@@ -287,7 +309,7 @@ OpCode disasm1(uint8_t *text, uint16_t addr) {
         {
             OpCode op = modrm(mem, "esc", false);
             op.opr2 = Operand(0, true, Addr, (b << 16) | ((mem[1] >> 3) & 7));
-            op.swap();
+            swap(&op);
             return op;
         }
 #endif

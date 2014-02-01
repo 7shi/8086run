@@ -24,4 +24,4 @@ struct Operand {
     }
 };
 
-size_t disasm1(Operand *opr1, Operand *opr2, uint8_t *text, uint16_t addr);
+size_t disasm(Operand *opr1, Operand *opr2, uint8_t *text, uint16_t addr);

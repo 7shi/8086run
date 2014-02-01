@@ -126,9 +126,9 @@ inline void set16(const Operand &opr, uint16_t value) {
     }
 }
 
-void run1(uint8_t rep, uint8_t seg) {
+void run(uint8_t rep, uint8_t seg) {
     Operand opr1, opr2;
-    size_t oplen = disasm1(&opr1, &opr2, mem, ip);
+    size_t oplen = disasm(&opr1, &opr2, mem, ip);
     int opr1v = opr1.value, opr2v = opr2.value;
     uint8_t b = mem[ip];
     uint16_t oldip = ip;
@@ -244,7 +244,7 @@ void run1(uint8_t rep, uint8_t seg) {
             AX = setf16(int16_t(AX & opr2v), false);
             return;
         case 0x26: // es:
-            return run1(0, b);
+            return run(0, b);
         case 0x28: // sub r/m, reg8
             val = int8_t(dst = get8(opr1)) - int8_t(src = *r8[opr2v]);
             set8(opr1, setf8(val, dst < src));
@@ -270,7 +270,7 @@ void run1(uint8_t rep, uint8_t seg) {
             AX = setf16(val, dst < src);
             return;
         case 0x2e: // cs:
-            return run1(0, b);
+            return run(0, b);
         case 0x30: // xor r/m, reg8
             set8(opr1, setf8(int8_t(get8(opr1) ^ *r8[opr2v]), false));
             return;
@@ -290,7 +290,7 @@ void run1(uint8_t rep, uint8_t seg) {
             AX = setf16(int16_t(AX ^ opr2v), false);
             return;
         case 0x36: // ss:
-            return run1(0, b);
+            return run(0, b);
         case 0x38: // cmp r/m, reg8
             val = int8_t(dst = get8(opr1)) - int8_t(src = *r8[opr2v]);
             setf8(val, dst < src);
@@ -316,7 +316,7 @@ void run1(uint8_t rep, uint8_t seg) {
             setf16(val, dst < src);
             return;
         case 0x3e: // ds:
-            return run1(0, b);
+            return run(0, b);
         case 0x40: // inc reg16
         case 0x41:
         case 0x42:
@@ -954,7 +954,7 @@ void run1(uint8_t rep, uint8_t seg) {
         case 0xf3: // rep/repz/repe
             if (CX) {
                 ip = oldip + 1;
-                run1(b, 0);
+                run(b, 0);
             }
             return;
         case 0xf5: // cmc

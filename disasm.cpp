@@ -113,7 +113,7 @@ static inline OpCode aimm(uint8_t *mem, const char *mne) {
             getop(2, mne, reg(0, false), imm8(mem[1]));
 }
 
-OpCode disasm1(uint8_t *text, uint16_t addr) {
+OpCode disasm(uint8_t *text, uint16_t addr) {
     uint8_t *mem = text + addr, b = mem[0];
     switch (b) {
         case 0x00:
@@ -418,8 +418,8 @@ OpCode disasm1(uint8_t *text, uint16_t addr) {
     return undefop;
 }
 
-size_t disasm1(Operand *opr1, Operand *opr2, uint8_t *text, uint16_t addr) {
-    OpCode op = disasm1(text, addr);
+size_t disasm(Operand *opr1, Operand *opr2, uint8_t *text, uint16_t addr) {
+    OpCode op = disasm(text, addr);
     *opr1 = op.opr1;
     *opr2 = op.opr2;
     return op.len;

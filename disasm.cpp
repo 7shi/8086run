@@ -47,12 +47,11 @@ inline Operand disp16(uint8_t *mem, uint16_t addr) {
 // OpCode
 
 struct OpCode {
-    const char *prefix;
     size_t len;
     Operand opr1, opr2;
 };
 
-OpCode undefop = {NULL, 1, noopr, noopr};
+OpCode undefop = {1, noopr, noopr};
 
 static inline void swap(OpCode *op) {
     Operand tmp = op->opr1;
@@ -64,13 +63,7 @@ static inline OpCode getop(
         size_t len, const char *mne,
         const Operand &opr1 = noopr,
         const Operand &opr2 = noopr) {
-    OpCode ret = {NULL, len, opr1, opr2};
-    return ret;
-}
-
-static inline OpCode getop(
-        const char *mne, const Operand &opr = noopr) {
-    OpCode ret = {mne, 1, noopr, opr};
+    OpCode ret = {len, opr1, opr2};
     return ret;
 }
 
@@ -153,7 +146,6 @@ OpCode disasm(uint8_t *text, uint16_t addr) {
         case 0x23: return regrm(mem, "and", b & 2, b & 1);
         case 0x24:
         case 0x25: return aimm(mem, "and");
-        case 0x26: return getop("es:", es);
         case 0x27: return getop(1, "daa");
         case 0x28:
         case 0x29:
@@ -161,7 +153,6 @@ OpCode disasm(uint8_t *text, uint16_t addr) {
         case 0x2b: return regrm(mem, "sub", b & 2, b & 1);
         case 0x2c:
         case 0x2d: return aimm(mem, "sub");
-        case 0x2e: return getop("cs:", cs);
         case 0x2f: return getop(1, "das");
         case 0x30:
         case 0x31:
@@ -169,7 +160,6 @@ OpCode disasm(uint8_t *text, uint16_t addr) {
         case 0x33: return regrm(mem, "xor", b & 2, b & 1);
         case 0x34:
         case 0x35: return aimm(mem, "xor");
-        case 0x36: return getop("ss:", ss);
         case 0x37: return getop(1, "aaa");
         case 0x38:
         case 0x39:
@@ -177,7 +167,6 @@ OpCode disasm(uint8_t *text, uint16_t addr) {
         case 0x3b: return regrm(mem, "cmp", b & 2, b & 1);
         case 0x3c:
         case 0x3d: return aimm(mem, "cmp");
-        case 0x3e: return getop("ds:", ds);
         case 0x3f: return getop(1, "aas");
         case 0x40:
         case 0x41:
@@ -382,9 +371,6 @@ OpCode disasm(uint8_t *text, uint16_t addr) {
         case 0xed: return getop(1, "in", reg(0, b & 1), dx);
         case 0xee:
         case 0xef: return getop(1, "out", dx, reg(0, b & 1));
-        case 0xf0: return getop("lock");
-        case 0xf2: return getop("repnz");
-        case 0xf3: return getop("repz");
         case 0xf4: return getop(1, "hlt");
         case 0xf5: return getop(1, "cmc");
         case 0xf6:

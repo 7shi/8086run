@@ -31,32 +31,13 @@ inline uint16_t read16(uint8_t *p) {
     return p[0] | (p[1] << 8);
 }
 
-inline uint32_t read32(uint8_t *p) {
-    return p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24);
-}
-
 inline uint16_t read16(uint16_t addr) {
     return read16(mem + addr);
-}
-
-inline uint32_t read32(uint16_t addr) {
-    return read32(mem + addr);
-}
-
-inline void write8(uint16_t addr, uint8_t value) {
-    mem[addr] = value;
 }
 
 inline void write16(uint16_t addr, uint16_t value) {
     mem[addr] = value;
     mem[addr + 1] = value >> 8;
-}
-
-inline void write32(uint16_t addr, uint32_t value) {
-    mem[addr] = value;
-    mem[addr + 1] = value >> 8;
-    mem[addr + 2] = value >> 16;
-    mem[addr + 3] = value >> 24;
 }
 
 enum OperandType {
@@ -141,7 +122,7 @@ struct Operand {
                 *r8[v] = value;
             } else {
                 int ad = addr();
-                if (ad >= 0) write8(ad, value);
+                if (ad >= 0) mem[ad] = value;
             }
         }
         return *this;
@@ -723,7 +704,7 @@ void run(uint8_t rep, uint8_t seg) {
         case 0xa4: // movsb
             ++ip;
             do {
-                write8(DI, mem[SI]);
+                mem[DI] = mem[SI];
                 if (DF) {
                     SI--;
                     DI--;
@@ -789,7 +770,7 @@ void run(uint8_t rep, uint8_t seg) {
         case 0xaa: // stosb
             ++ip;
             do {
-                write8(DI, AL);
+                mem[DI] = AL;
                 if (DF) DI--;
                 else DI++;
                 if (rep) CX--;
@@ -1066,10 +1047,10 @@ void run(uint8_t rep, uint8_t seg) {
         case 0xe8: // call disp
             SP -= 2;
             write16(SP, ip + 3);
-            ip += 3 + read16(p + 1);
+            ip += 3 + read16(ip + 1);
             return;
         case 0xe9: // jmp disp
-            ip += 3 + read16(p + 1);
+            ip += 3 + read16(ip + 1);
             return;
         case 0xeb: // jmp short
             ip += 2 + (int8_t) p[1];

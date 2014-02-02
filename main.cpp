@@ -84,6 +84,11 @@ struct Operand {
         return 2;
     }
 
+    inline size_t regrm(Operand *opr, uint8_t *p, bool w) {
+        opr->set(Reg, w, (p[1] >> 3) & 7);
+        return modrm(p, w);
+    }
+
     int addr() {
         switch (type) {
             case Ptr: return uint16_t(v);
@@ -128,16 +133,6 @@ struct Operand {
         return *this;
     }
 };
-
-inline size_t regrm(Operand *opr1, Operand *opr2, uint8_t *p, bool d, int w) {
-    size_t len = (d ? opr2 : opr1)->modrm(p, w);
-    if (w == 2) {
-        (d ? opr1 : opr2)->set(SReg, w, (p[1] >> 3) & 3);
-    } else {
-        (d ? opr1 : opr2)->set(Reg, w, (p[1] >> 3) & 7);
-    }
-    return len;
-}
 
 Operand dx(Reg, true, 2);
 Operand cl(Reg, false, 1);
@@ -188,22 +183,22 @@ void run(uint8_t rep, uint8_t seg) {
     int dst, src, val;
     switch (b) {
         case 0x00: // add r/m, reg8
-            ip += regrm(&opr1, &opr2, p, 0, 0);
+            ip += opr1.regrm(&opr2, p, 0);
             val = int8_t(dst = *opr1) + int8_t(*opr2);
             opr1 = setf8(val, dst > uint8_t(val));
             return;
         case 0x01: // add r/m, reg16
-            ip += regrm(&opr1, &opr2, p, 0, 1);
+            ip += opr1.regrm(&opr2, p, 1);
             val = int16_t(dst = *opr1) + int16_t(*opr2);
             opr1 = setf16(val, dst > uint16_t(val));
             return;
         case 0x02: // add reg8, r/m
-            ip += regrm(&opr1, &opr2, p, 1, 0);
+            ip += opr2.regrm(&opr1, p, 0);
             val = int8_t(dst = *opr1) + int8_t(*opr2);
             opr1 = setf8(val, dst > uint8_t(val));
             return;
         case 0x03: // add reg16, r/m
-            ip += regrm(&opr1, &opr2, p, 1, 1);
+            ip += opr2.regrm(&opr1, p, 1);
             val = int16_t(dst = *opr1) + int16_t(*opr2);
             opr1 = setf16(val, dst > uint16_t(val));
             return;
@@ -218,19 +213,19 @@ void run(uint8_t rep, uint8_t seg) {
             AX = setf16(val, dst > uint16_t(val));
             return;
         case 0x08: // or r/m, reg8
-            ip += regrm(&opr1, &opr2, p, 0, 0);
+            ip += opr1.regrm(&opr2, p, 0);
             opr1 = setf8(int8_t(*opr1 | *opr2), false);
             return;
         case 0x09: // or r/m, reg16
-            ip += regrm(&opr1, &opr2, p, 0, 1);
+            ip += opr1.regrm(&opr2, p, 1);
             opr1 = setf16(int16_t(*opr1 | *opr2), false);
             return;
         case 0x0a: // or reg8, r/m
-            ip += regrm(&opr1, &opr2, p, 1, 0);
+            ip += opr2.regrm(&opr1, p, 0);
             opr1 = setf8(int8_t(*opr1 | *opr2), false);
             return;
         case 0x0b: // or reg16, r/m
-            ip += regrm(&opr1, &opr2, p, 1, 1);
+            ip += opr2.regrm(&opr1, p, 1);
             opr1 = setf16(int16_t(*opr1 | *opr2), false);
             return;
         case 0x0c: // or al, imm8
@@ -242,22 +237,22 @@ void run(uint8_t rep, uint8_t seg) {
             AX = setf16(int16_t(AX | read16(p + 1)), false);
             return;
         case 0x10: // adc r/m, reg8
-            ip += regrm(&opr1, &opr2, p, 0, 0);
+            ip += opr1.regrm(&opr2, p, 0);
             val = int8_t(dst = *opr1) + int8_t(*opr2) + int(CF);
             opr1 = setf8(val, dst > uint8_t(val));
             return;
         case 0x11: // adc r/m, reg16
-            ip += regrm(&opr1, &opr2, p, 0, 1);
+            ip += opr1.regrm(&opr2, p, 1);
             val = int16_t(dst = *opr1) + int16_t(*opr2) + int(CF);
             opr1 = setf16(val, dst > uint16_t(val));
             return;
         case 0x12: // adc reg8, r/m
-            ip += regrm(&opr1, &opr2, p, 1, 0);
+            ip += opr2.regrm(&opr1, p, 0);
             val = int8_t(dst = *opr1) + int8_t(*opr2) + int(CF);
             opr1 = setf8(val, dst > uint8_t(val));
             return;
         case 0x13: // adc reg16, r/m
-            ip += regrm(&opr1, &opr2, p, 1, 1);
+            ip += opr2.regrm(&opr1, p, 1);
             val = int16_t(dst = *opr1) + int16_t(*opr2) + int(CF);
             opr1 = setf16(val, dst > uint16_t(val));
             return;
@@ -272,22 +267,22 @@ void run(uint8_t rep, uint8_t seg) {
             AX = setf16(val, dst > uint16_t(val));
             return;
         case 0x18: // sbb r/m, reg8
-            ip += regrm(&opr1, &opr2, p, 0, 0);
+            ip += opr1.regrm(&opr2, p, 0);
             val = int8_t(dst = *opr1) - int8_t(src = *opr2 + int(CF));
             opr1 = setf8(val, dst < src);
             return;
         case 0x19: // sbb r/m, reg16
-            ip += regrm(&opr1, &opr2, p, 0, 1);
+            ip += opr1.regrm(&opr2, p, 1);
             val = int16_t(dst = *opr1) - int16_t(src = *opr2 + int(CF));
             opr1 = setf16(val, dst < src);
             return;
         case 0x1a: // sbb reg8, r/m
-            ip += regrm(&opr1, &opr2, p, 1, 0);
+            ip += opr2.regrm(&opr1, p, 0);
             val = int8_t(dst = *opr1) - int8_t(src = *opr2 + int(CF));
             opr1 = setf8(val, dst < src);
             return;
         case 0x1b: // sbb reg16, r/m
-            ip += regrm(&opr1, &opr2, p, 1, 1);
+            ip += opr2.regrm(&opr1, p, 1);
             val = int16_t(dst = *opr1) - int16_t(src = *opr2 + int(CF));
             opr1 = setf16(val, dst < src);
             return;
@@ -302,19 +297,19 @@ void run(uint8_t rep, uint8_t seg) {
             AX = setf16(val, dst < src);
             return;
         case 0x20: // and r/m, reg8
-            ip += regrm(&opr1, &opr2, p, 0, 0);
+            ip += opr1.regrm(&opr2, p, 0);
             opr1 = setf8(int8_t(*opr1 & *opr2), false);
             return;
         case 0x21: // and r/m, reg16
-            ip += regrm(&opr1, &opr2, p, 0, 1);
+            ip += opr1.regrm(&opr2, p, 1);
             opr1 = setf16(int16_t(*opr1 & *opr2), false);
             return;
         case 0x22: // and reg8, r/m
-            ip += regrm(&opr1, &opr2, p, 1, 0);
+            ip += opr2.regrm(&opr1, p, 0);
             opr1 = setf8(int8_t(*opr1 & *opr2), false);
             return;
         case 0x23: // and reg16, r/m
-            ip += regrm(&opr1, &opr2, p, 1, 1);
+            ip += opr2.regrm(&opr1, p, 1);
             opr1 = setf16(int16_t(*opr1 & *opr2), false);
             return;
         case 0x24: // and al, imm8
@@ -328,22 +323,22 @@ void run(uint8_t rep, uint8_t seg) {
         case 0x26: // es:
             return run(0, b);
         case 0x28: // sub r/m, reg8
-            ip += regrm(&opr1, &opr2, p, 0, 0);
+            ip += opr1.regrm(&opr2, p, 0);
             val = int8_t(dst = *opr1) - int8_t(src = *opr2);
             opr1 = setf8(val, dst < src);
             return;
         case 0x29: // sub r/m, reg16
-            ip += regrm(&opr1, &opr2, p, 0, 1);
+            ip += opr1.regrm(&opr2, p, 1);
             val = int16_t(dst = *opr1) - int16_t(src = *opr2);
             opr1 = setf16(val, dst < src);
             return;
         case 0x2a: // sub reg8, r/m
-            ip += regrm(&opr1, &opr2, p, 1, 0);
+            ip += opr2.regrm(&opr1, p, 0);
             val = int8_t(dst = *opr1) - int8_t(src = *opr2);
             opr1 = setf8(val, dst < src);
             return;
         case 0x2b: // sub reg16, r/m
-            ip += regrm(&opr1, &opr2, p, 1, 1);
+            ip += opr2.regrm(&opr1, p, 1);
             val = int16_t(dst = *opr1) - int16_t(src = *opr2);
             opr1 = setf16(val, dst < src);
             return;
@@ -360,19 +355,19 @@ void run(uint8_t rep, uint8_t seg) {
         case 0x2e: // cs:
             return run(0, b);
         case 0x30: // xor r/m, reg8
-            ip += regrm(&opr1, &opr2, p, 0, 0);
+            ip += opr1.regrm(&opr2, p, 0);
             opr1 = setf8(int8_t(*opr1 ^ *opr2), false);
             return;
         case 0x31: // xor r/m, reg16
-            ip += regrm(&opr1, &opr2, p, 0, 1);
+            ip += opr1.regrm(&opr2, p, 1);
             opr1 = setf16(int16_t(*opr1 ^ *opr2), false);
             return;
         case 0x32: // xor reg8, r/m
-            ip += regrm(&opr1, &opr2, p, 1, 0);
+            ip += opr2.regrm(&opr1, p, 0);
             opr1 = setf8(int8_t(*opr1 ^ *opr2), false);
             return;
         case 0x33: // xor reg16, r/m
-            ip += regrm(&opr1, &opr2, p, 1, 1);
+            ip += opr2.regrm(&opr1, p, 1);
             opr1 = setf16(int16_t(*opr1 ^ *opr2), false);
             return;
         case 0x34: // xor al, imm8
@@ -386,22 +381,22 @@ void run(uint8_t rep, uint8_t seg) {
         case 0x36: // ss:
             return run(0, b);
         case 0x38: // cmp r/m, reg8
-            ip += regrm(&opr1, &opr2, p, 0, 0);
+            ip += opr1.regrm(&opr2, p, 0);
             val = int8_t(dst = *opr1) - int8_t(src = *opr2);
             setf8(val, dst < src);
             return;
         case 0x39: // cmp r/m, reg16
-            ip += regrm(&opr1, &opr2, p, 0, 1);
+            ip += opr1.regrm(&opr2, p, 1);
             val = int16_t(dst = *opr1) - int16_t(src = *opr2);
             setf16(val, dst < src);
             return;
         case 0x3a: // cmp reg8, r/m
-            ip += regrm(&opr1, &opr2, p, 1, 0);
+            ip += opr2.regrm(&opr1, p, 0);
             val = int8_t(dst = *opr1) - int8_t(src = *opr2);
             setf8(val, dst < src);
             return;
         case 0x3b: // cmp reg16, r/m
-            ip += regrm(&opr1, &opr2, p, 1, 1);
+            ip += opr2.regrm(&opr1, p, 1);
             val = int16_t(dst = *opr1) - int16_t(src = *opr2);
             setf16(val, dst < src);
             return;
@@ -591,43 +586,43 @@ void run(uint8_t rep, uint8_t seg) {
             }
             break;
         case 0x84: // test r/m, reg8
-            ip += regrm(&opr1, &opr2, p, 0, 0);
+            ip += opr1.regrm(&opr2, p, 0);
             setf8(int8_t(*opr1 & *opr2), false);
             return;
         case 0x85: // test r/m, reg16
-            ip += regrm(&opr1, &opr2, p, 0, 1);
+            ip += opr1.regrm(&opr2, p, 1);
             setf16(int16_t(*opr1 & *opr2), false);
             return;
         case 0x86: // xchg r/m, reg8
-            ip += regrm(&opr1, &opr2, p, 0, 0);
+            ip += opr1.regrm(&opr2, p, 0);
             val = *opr2;
             opr2 = *opr1;
             opr1 = val;
             return;
         case 0x87: // xchg r/m, reg16
-            ip += regrm(&opr1, &opr2, p, 0, 1);
+            ip += opr1.regrm(&opr2, p, 1);
             val = *opr2;
             opr2 = *opr1;
             opr1 = val;
             return;
         case 0x88: // mov r/m, reg8
-            ip += regrm(&opr1, &opr2, p, 0, 0);
+            ip += opr1.regrm(&opr2, p, 0);
             opr1 = *opr2;
             return;
         case 0x89: // mov r/m, reg16
-            ip += regrm(&opr1, &opr2, p, 0, 1);
+            ip += opr1.regrm(&opr2, p, 1);
             opr1 = *opr2;
             return;
         case 0x8a: // mov reg8, r/m
-            ip += regrm(&opr1, &opr2, p, 1, 0);
+            ip += opr2.regrm(&opr1, p, 0);
             opr1 = *opr2;
             return;
         case 0x8b: // mov reg16, r/m
-            ip += regrm(&opr1, &opr2, p, 1, 1);
+            ip += opr2.regrm(&opr1, p, 1);
             opr1 = *opr2;
             return;
         case 0x8d: // lea reg16, r/m
-            ip += regrm(&opr1, &opr2, p, 1, 1);
+            ip += opr2.regrm(&opr1, p, 1);
             opr1 = opr2.addr();
             return;
         case 0x8f: // pop r/m

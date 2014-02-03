@@ -9,7 +9,7 @@ void c3_init(const char *, const char *);
 bool c3_compat();
 void c3_0f();
 
-uint8_t mem[0x11000], *segs[4];
+uint8_t mem[0x110000], *segs[4];
 uint16_t ip, r[8], sr[4];
 uint8_t *r8[8];
 bool OF, DF, SF, ZF, PF, CF;

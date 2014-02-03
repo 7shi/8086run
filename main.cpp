@@ -1516,7 +1516,7 @@ void c3_init(const char *bios, const char *fd) {
 }
 
 bool c3_compat() {
-    return *CS && ip;
+    return ip || *CS;
 }
 
 void c3_0f(int n) {

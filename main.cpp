@@ -7,7 +7,7 @@
 
 void c3_init(const char *, const char *);
 bool c3_compat();
-void c3_0f();
+void c3_0f(int);
 
 uint8_t mem[0x110000], *segs[4];
 uint16_t ip, r[8], sr[4];
@@ -286,6 +286,8 @@ void step(uint8_t rep, uint8_t *seg) {
             ip += 3;
             AX = setf16(int16_t(AX | read16(p + 1)), false);
             return;
+        case 0x0f: // cable3 hyper call
+            return c3_0f(p[1]);
         case 0x10: // adc r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
             val = int8_t(dst = *opr1) + int8_t(*opr2) + int(CF);
@@ -1326,4 +1328,10 @@ void c3_init(const char *bios, const char *fd) {
 
 bool c3_compat() {
     return CS && ip;
+}
+
+void c3_0f(int n) {
+    ip += 2;
+    fprintf(stderr, "%04x:%04x 0f%02x invalid hyper call\n", CS, ip - 2, n);
+    exit(1);
 }

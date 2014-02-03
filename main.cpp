@@ -53,10 +53,6 @@ inline void write16(uint8_t *p, uint16_t value) {
     p[1] = value >> 8;
 }
 
-inline uint16_t read16(uint16_t addr) {
-    return read16(mem + addr);
-}
-
 enum OperandType {
     Reg, SReg, Imm, Addr, Far, Ptr, ModRM
 };
@@ -745,7 +741,7 @@ void run(uint8_t rep, uint8_t *seg) {
         case 0xa5: // movsw
             ++ip;
             do {
-                write16(ESEG + DI, read16(SI));
+                write16(ESEG + DI, read16(DSEG + SI));
                 if (DF) {
                     SI -= 2;
                     DI -= 2;
@@ -774,7 +770,7 @@ void run(uint8_t rep, uint8_t *seg) {
         case 0xa7: // cmpsw
             ++ip;
             do {
-                val = int16_t(dst = read16(SI)) - int16_t(src = read16(DI));
+                val = int16_t(dst = read16(DSEG + SI)) - int16_t(src = read16(ESEG + DI));
                 setf16(val, dst < src);
                 if (DF) {
                     SI -= 2;
@@ -824,7 +820,7 @@ void run(uint8_t rep, uint8_t *seg) {
         case 0xad: // lodsw
             ++ip;
             do {
-                AX = read16(SI);
+                AX = read16(DSEG + SI);
                 if (DF) SI -= 2;
                 else SI += 2;
                 if (rep) CX--;
@@ -843,7 +839,7 @@ void run(uint8_t rep, uint8_t *seg) {
         case 0xaf: // scasw
             ++ip;
             do {
-                val = int16_t(AX) - int16_t(src = read16(DI));
+                val = int16_t(AX) - int16_t(src = read16(ESEG + DI));
                 setf16(val, AX < src);
                 if (DF) DI -= 2;
                 else DI += 2;
@@ -885,7 +881,7 @@ void run(uint8_t rep, uint8_t *seg) {
             return;
         case 0xc7: // mov r/m, imm16
             ip += opr1.modrm(p, 0, seg) + 2;
-            opr1 = read16(ip - 2);
+            opr1 = read16(CSEG + ip - 2);
             return;
         case 0xd0: // byte r/m, 1
             ip += opr1.modrm(p, 0, seg);
@@ -1072,10 +1068,10 @@ void run(uint8_t rep, uint8_t *seg) {
             return jumpif(p[1], CX == 0);
         case 0xe8: // call disp
             push(ip + 3);
-            ip += 3 + read16(ip + 1);
+            ip += 3 + read16(CSEG + ip + 1);
             return;
         case 0xe9: // jmp disp
-            ip += 3 + read16(ip + 1);
+            ip += 3 + read16(CSEG + ip + 1);
             return;
         case 0xeb: // jmp short
             ip += 2 + (int8_t) p[1];
@@ -1132,7 +1128,7 @@ void run(uint8_t rep, uint8_t *seg) {
             switch ((p[1] >> 3) & 7) {
                 case 0: // test r/m, imm16
                     ip += 2;
-                    setf16(int16_t(*opr1 & read16(ip - 2)), false);
+                    setf16(int16_t(*opr1 & read16(CSEG + ip - 2)), false);
                     return;
                 case 2: // not r/m
                     opr1 = ~*opr1;

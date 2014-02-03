@@ -117,6 +117,12 @@ struct Operand {
         return -1;
     }
 
+    inline uint8_t * ptr() {
+        int ad = addr();
+        if (ad < 0) return NULL;
+        return &(seg ? seg : getseg())[ad];
+    }
+
     inline uint8_t * getseg() {
         switch (type) {
             case ModRM + 2:
@@ -132,10 +138,9 @@ struct Operand {
             case Reg: return w ? r[v]: *r8[v];
             case Imm: return v;
         }
-        int ad = addr();
-        if (ad < 0) return 0;
-        uint8_t *s = seg ? seg : getseg();
-        return w ? read16(s + ad) : s[ad];
+        uint8_t *p = ptr();
+        if (!p) return 0;
+        return w ? read16(p) : *p;
     }
 
     inline Operand &operator =(int value) {
@@ -143,13 +148,12 @@ struct Operand {
             if (w)r[v] = value;
             else*r8[v] = value;
         } else {
-            int ad = addr();
-            if (ad >= 0) {
-                uint8_t *s = seg ? seg : getseg();
+            uint8_t *p = ptr();
+            if (p) {
                 if (w) {
-                    write16(s + ad, value);
+                    write16(p, value);
                 } else {
-                    s[ad] = value;
+                    *p = value;
                 }
             }
         }

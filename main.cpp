@@ -9,8 +9,8 @@ void c3_init(const char *, const char *);
 bool c3_compat();
 void c3_0f(int);
 
-uint8_t mem[0x110000], io[0x10000], *segs[4];
-uint16_t ip, r[8], sr[4];
+uint8_t mem[0x110000], io[0x10000];
+uint16_t ip, r[8];
 uint8_t *r8[8];
 bool OF, DF, IF, TF, SF, ZF, AF, PF, CF;
 bool ptable[256];
@@ -33,15 +33,28 @@ bool ptable[256];
 #define DH *r8[6]
 #define BH *r8[7]
 
+struct SReg {
+    uint16_t v;
+    uint8_t *p;
+
+    inline uint16_t operator *() {
+        return v;
+    }
+
+    inline uint16_t operator =(uint16_t v) {
+        p = &mem[v << 4];
+        return this->v = v;
+    }
+
+    inline uint8_t &operator[](int addr) {
+        return p[addr];
+    }
+} sr[4];
+
 #define ES sr[0]
 #define CS sr[1]
 #define SS sr[2]
 #define DS sr[3]
-
-#define ESEG segs[0]
-#define CSEG segs[1]
-#define SSEG segs[2]
-#define DSEG segs[3]
 
 inline uint16_t read16(uint8_t *p) {
     return p[0] | (p[1] << 8);
@@ -60,23 +73,23 @@ struct Operand {
     int type;
     bool w;
     int v;
-    uint8_t *seg;
+    SReg *seg;
 
     Operand() {
     }
 
-    Operand(int type, bool w, int v, uint8_t *seg) {
+    Operand(int type, bool w, int v, SReg *seg) {
         set(type, w, v, seg);
     }
 
-    inline void set(int type, bool w, int v, uint8_t *seg) {
+    inline void set(int type, bool w, int v, SReg *seg) {
         this->type = type;
         this->w = w;
         this->v = v;
         this->seg = seg;
     }
 
-    inline size_t modrm(uint8_t *p, bool w, uint8_t *seg) {
+    inline size_t modrm(uint8_t *p, bool w, SReg *seg) {
         uint8_t b = p[1], mod = b >> 6, rm = b & 7;
         switch (mod) {
             case 0:
@@ -97,7 +110,7 @@ struct Operand {
         return 2;
     }
 
-    inline size_t regrm(Operand *opr, uint8_t *p, bool w, uint8_t *seg) {
+    inline size_t regrm(Operand *opr, uint8_t *p, bool w, SReg *seg) {
         opr->set(Reg, w, (p[1] >> 3) & 7, NULL);
         return modrm(p, w, seg);
     }
@@ -120,17 +133,18 @@ struct Operand {
     inline uint8_t * ptr() {
         int ad = addr();
         if (ad < 0) return NULL;
-        return &(seg ? seg : getseg())[ad];
+        return &getseg()[ad];
     }
 
-    inline uint8_t * getseg() {
+    inline SReg & getseg() {
+        if (seg) return *seg;
         switch (type) {
             case ModRM + 2:
             case ModRM + 3:
             case ModRM + 6:
-                return SSEG;
+                return SS;
         }
-        return DSEG;
+        return DS;
     }
 
     inline int operator *() {
@@ -163,11 +177,7 @@ struct Operand {
     }
 };
 
-inline Operand far(uint32_t a, uint8_t *seg) {
-    return Operand(Far, false, (int) a, seg);
-}
-
-inline Operand ptr(uint16_t a, bool w, uint8_t *seg) {
+inline Operand ptr(uint16_t a, bool w, SReg *seg) {
     return Operand(Ptr, w, a, seg);
 }
 
@@ -217,11 +227,11 @@ inline void jumpif(int8_t offset, bool c) {
 }
 
 inline void push(uint16_t val) {
-    write16(SSEG + (SP -= 2), val);
+    write16(&SS[SP -= 2], val);
 }
 
 inline uint16_t pop() {
-    uint16_t val = read16(SSEG + SP);
+    uint16_t val = read16(&SS[SP]);
     SP += 2;
     return val;
 }
@@ -229,16 +239,16 @@ inline uint16_t pop() {
 inline void intr(int n) {
     push(getf());
     IF = TF = 0;
-    push(CS);
+    push(*CS);
     push(ip);
     uint8_t *v = &mem[n << 2];
-    CSEG = &mem[(CS = read16(v + 2)) << 4];
+    CS = read16(v + 2);
     ip = read16(v);
 }
 
-void step(uint8_t rep, uint8_t *seg) {
+void step(uint8_t rep, SReg *seg) {
     Operand opr1, opr2;
-    uint8_t *p = CSEG + ip, b = *p;
+    uint8_t *p = &CS[ip], b = *p;
     int dst, src, val;
     switch (b) {
         case 0x00: // add r/m, reg8
@@ -273,10 +283,10 @@ void step(uint8_t rep, uint8_t *seg) {
             return;
         case 0x06: // push es
             ++ip;
-            return push(ES);
+            return push(*ES);
         case 0x07: // pop es
             ++ip;
-            ESEG = &mem[(ES = pop()) << 4];
+            ES = pop();
             return;
         case 0x08: // or r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
@@ -304,7 +314,7 @@ void step(uint8_t rep, uint8_t *seg) {
             return;
         case 0x0e: // push cs
             ++ip;
-            return push(CS);
+            return push(*CS);
         case 0x0f: // cable3 hyper call
             return c3_0f(p[1]);
         case 0x10: // adc r/m, reg8
@@ -339,10 +349,10 @@ void step(uint8_t rep, uint8_t *seg) {
             return;
         case 0x16: // push ss
             ++ip;
-            return push(SS);
+            return push(*SS);
         case 0x17: // pop ss
             ++ip;
-            SSEG = &mem[(SS = pop()) << 4];
+            SS = pop();
             return;
         case 0x18: // sbb r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
@@ -376,10 +386,10 @@ void step(uint8_t rep, uint8_t *seg) {
             return;
         case 0x1e: // push ds
             ++ip;
-            return push(DS);
+            return push(*DS);
         case 0x1f: // pop ds
             ++ip;
-            DSEG = &mem[(DS = pop()) << 4];
+            DS = pop();
             return;
         case 0x20: // and r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
@@ -407,7 +417,7 @@ void step(uint8_t rep, uint8_t *seg) {
             return;
         case 0x26: // es:
             ++ip;
-            return step(rep, ESEG);
+            return step(rep, &ES);
         case 0x28: // sub r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
             val = int8_t(dst = *opr1) - int8_t(src = *opr2);
@@ -440,7 +450,7 @@ void step(uint8_t rep, uint8_t *seg) {
             return;
         case 0x2e: // cs:
             ++ip;
-            return step(rep, CSEG);
+            return step(rep, &CS);
         case 0x30: // xor r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
             opr1 = setf8(int8_t(*opr1 ^ *opr2), false);
@@ -467,7 +477,7 @@ void step(uint8_t rep, uint8_t *seg) {
             return;
         case 0x36: // ss:
             ++ip;
-            return step(rep, SSEG);
+            return step(rep, &SS);
         case 0x38: // cmp r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
             val = int8_t(dst = *opr1) - int8_t(src = *opr2);
@@ -500,7 +510,7 @@ void step(uint8_t rep, uint8_t *seg) {
             return;
         case 0x3e: // ds:
             ++ip;
-            return step(rep, DSEG);
+            return step(rep, &DS);
         case 0x40: // inc reg16
         case 0x41:
         case 0x42:
@@ -581,39 +591,39 @@ void step(uint8_t rep, uint8_t *seg) {
             ip += opr1.modrm(p, 0, seg) + 1;
             switch ((p[1] >> 3) & 7) {
                 case 0: // add
-                    val = int8_t(dst = *opr1) + int8_t(CSEG[ip - 1]);
+                    val = int8_t(dst = *opr1) + int8_t(CS[ip - 1]);
                     opr1 = setf8(val, dst > uint8_t(val));
                     return;
                 case 1: // or
-                    opr1 = setf8(int8_t(*opr1 | CSEG[ip - 1]), false);
+                    opr1 = setf8(int8_t(*opr1 | CS[ip - 1]), false);
                     return;
                 case 2: // adc
-                    val = int8_t(dst = *opr1) + int8_t(CSEG[ip - 1]) + int(CF);
+                    val = int8_t(dst = *opr1) + int8_t(CS[ip - 1]) + int(CF);
                     opr1 = setf8(val, dst > uint8_t(val));
                     return;
                 case 3: // sbb
-                    val = int8_t(dst = *opr1) - int8_t(src = CSEG[ip - 1] + int(CF));
+                    val = int8_t(dst = *opr1) - int8_t(src = CS[ip - 1] + int(CF));
                     opr1 = setf8(val, dst < src);
                     return;
                 case 4: // and
-                    opr1 = setf8(int8_t(*opr1 & CSEG[ip - 1]), false);
+                    opr1 = setf8(int8_t(*opr1 & CS[ip - 1]), false);
                     return;
                 case 5: // sub
-                    val = int8_t(dst = *opr1) - int8_t(src = CSEG[ip - 1]);
+                    val = int8_t(dst = *opr1) - int8_t(src = CS[ip - 1]);
                     opr1 = setf8(val, dst < src);
                     return;
                 case 6: // xor
-                    opr1 = setf8(int8_t(*opr1 ^ CSEG[ip - 1]), false);
+                    opr1 = setf8(int8_t(*opr1 ^ CS[ip - 1]), false);
                     return;
                 case 7: // cmp
-                    val = int8_t(dst = *opr1) - int8_t(src = CSEG[ip - 1]);
+                    val = int8_t(dst = *opr1) - int8_t(src = CS[ip - 1]);
                     setf8(val, dst < src);
                     return;
             }
             break;
         case 0x81: // r/m, imm16
             ip += opr1.modrm(p, 1, seg) + 2;
-            opr2.v = read16(CSEG + ip - 2);
+            opr2.v = read16(&CS[ip] - 2);
             switch ((p[1] >> 3) & 7) {
                 case 0: // add
                     val = int16_t(dst = *opr1) + int16_t(opr2.v);
@@ -650,23 +660,23 @@ void step(uint8_t rep, uint8_t *seg) {
             ip += opr1.modrm(p, 0, seg) + 1;
             switch ((p[1] >> 3) & 7) {
                 case 0: // add
-                    val = int8_t(dst = *opr1) + int8_t(CSEG[ip - 1]);
+                    val = int8_t(dst = *opr1) + int8_t(CS[ip - 1]);
                     opr1 = setf8(val, dst > uint8_t(val));
                     return;
                 case 2: // adc
-                    val = int8_t(dst = *opr1) + int8_t(CSEG[ip - 1]) + int(CF);
+                    val = int8_t(dst = *opr1) + int8_t(CS[ip - 1]) + int(CF);
                     opr1 = setf8(val, dst > uint8_t(val));
                     return;
                 case 3: // sbb
-                    val = int8_t(dst = *opr1) - int8_t(src = CSEG[ip - 1] + int(CF));
+                    val = int8_t(dst = *opr1) - int8_t(src = CS[ip - 1] + int(CF));
                     opr1 = setf8(val, dst < uint8_t(src));
                     return;
                 case 5: // sub
-                    val = int8_t(dst = *opr1) - int8_t(src = CSEG[ip - 1]);
+                    val = int8_t(dst = *opr1) - int8_t(src = CS[ip - 1]);
                     opr1 = setf8(val, dst < uint8_t(src));
                     return;
                 case 7: // cmp
-                    val = int8_t(dst = *opr1) - int8_t(src = CSEG[ip - 1]);
+                    val = int8_t(dst = *opr1) - int8_t(src = CS[ip - 1]);
                     setf8(val, dst < uint8_t(src));
                     return;
             }
@@ -709,7 +719,7 @@ void step(uint8_t rep, uint8_t *seg) {
             return;
         case 0x8c: // mov r/m, sreg
             ip += opr1.modrm(p, 1, seg);
-            opr1 = sr[(p[1] >> 3) & 3];
+            opr1 = *sr[(p[1] >> 3) & 3];
             return;
         case 0x8d: // lea reg16, r/m
             ip += opr2.regrm(&opr1, p, 1, seg);
@@ -717,8 +727,7 @@ void step(uint8_t rep, uint8_t *seg) {
             return;
         case 0x8e: // mov sreg, r/m
             ip += opr2.modrm(p, 1, seg);
-            opr1.v = (p[1] >> 3) & 3;
-            segs[opr1.v] = &mem[(sr[opr1.v] = *opr2) << 4];
+            sr[(p[1] >> 3) & 3] = *opr2;
             return;
         case 0x8f: // pop r/m
             ip += opr1.modrm(p, 1, seg);
@@ -749,9 +758,9 @@ void step(uint8_t rep, uint8_t *seg) {
             return;
         case 0x9a: // callf
             ip += 5;
-            push(CS);
+            push(*CS);
             push(ip);
-            CSEG = &mem[(CS = read16(p + 3)) << 4];
+            CS = read16(p + 3);
             ip = read16(p + 1);
             return;
         case 0x9c: // pushf
@@ -786,7 +795,7 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0xa4: // movsb
             ++ip;
             do {
-                ESEG[DI] = DSEG[SI];
+                ES[DI] = DS[SI];
                 if (DF) {
                     SI--;
                     DI--;
@@ -800,7 +809,7 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0xa5: // movsw
             ++ip;
             do {
-                write16(ESEG + DI, read16(DSEG + SI));
+                write16(&ES[DI], read16(&DS[SI]));
                 if (DF) {
                     SI -= 2;
                     DI -= 2;
@@ -814,7 +823,7 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0xa6: // cmpsb
             ++ip;
             do {
-                val = int8_t(dst = DSEG[SI]) - int8_t(src = ESEG[DI]);
+                val = int8_t(dst = DS[SI]) - int8_t(src = ES[DI]);
                 setf8(val, dst < src);
                 if (DF) {
                     SI--;
@@ -829,7 +838,7 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0xa7: // cmpsw
             ++ip;
             do {
-                val = int16_t(dst = read16(DSEG + SI)) - int16_t(src = read16(ESEG + DI));
+                val = int16_t(dst = read16(&DS[SI])) - int16_t(src = read16(&ES[DI]));
                 setf16(val, dst < src);
                 if (DF) {
                     SI -= 2;
@@ -852,7 +861,7 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0xaa: // stosb
             ++ip;
             do {
-                ESEG[DI] = AL;
+                ES[DI] = AL;
                 if (DF) DI--;
                 else DI++;
                 if (rep) CX--;
@@ -861,7 +870,7 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0xab: // stosw
             ++ip;
             do {
-                write16(ESEG + DI, AX);
+                write16(&ES[DI], AX);
                 if (DF) DI -= 2;
                 else DI += 2;
                 if (rep) CX--;
@@ -870,7 +879,7 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0xac: // lodsb
             ++ip;
             do {
-                AL = DSEG[SI];
+                AL = DS[SI];
                 if (DF) SI--;
                 else SI++;
                 if (rep) CX--;
@@ -879,7 +888,7 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0xad: // lodsw
             ++ip;
             do {
-                AX = read16(DSEG + SI);
+                AX = read16(&DS[SI]);
                 if (DF) SI -= 2;
                 else SI += 2;
                 if (rep) CX--;
@@ -888,7 +897,7 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0xae: // scasb
             ++ip;
             do {
-                val = int8_t(AL) - int8_t(src = ESEG[DI]);
+                val = int8_t(AL) - int8_t(src = ES[DI]);
                 setf8(val, AL < src);
                 if (DF) DI--;
                 else DI++;
@@ -898,7 +907,7 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0xaf: // scasw
             ++ip;
             do {
-                val = int16_t(AX) - int16_t(src = read16(ESEG + DI));
+                val = int16_t(AX) - int16_t(src = read16(&ES[DI]));
                 setf16(val, AX < src);
                 if (DF) DI -= 2;
                 else DI += 2;
@@ -930,7 +939,7 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0xc0: // byte r/m, imm8 (80186)
             ip += opr1.modrm(p, 0, seg) + 1;
             val = *opr1;
-            opr2.v = CSEG[ip - 1];
+            opr2.v = CS[ip - 1];
             switch ((p[1] >> 3) & 7) {
                 case 0: // rol
                     for (int i = 0; i < opr2.v; ++i)
@@ -980,7 +989,7 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0xc1: // r/m, imm8 (80186)
             ip += opr1.modrm(p, 1, seg) + 1;
             val = *opr1;
-            opr2.v = CSEG[ip - 1];
+            opr2.v = CS[ip - 1];
             switch ((p[1] >> 3) & 7) {
                 case 0: // rol
                     for (int i = 0; i < opr2.v; ++i) {
@@ -1035,20 +1044,20 @@ void step(uint8_t rep, uint8_t *seg) {
             return;
         case 0xc6: // mov r/m, imm8
             ip += opr1.modrm(p, 0, seg) + 1;
-            opr1 = CSEG[ip - 1];
+            opr1 = CS[ip - 1];
             return;
         case 0xc7: // mov r/m, imm16
             ip += opr1.modrm(p, 0, seg) + 2;
-            opr1 = read16(CSEG + ip - 2);
+            opr1 = read16(&CS[ip] - 2);
             return;
         case 0xca: // retf imm16
             ip = pop();
-            CSEG = &mem[(CS = pop()) << 4];
+            CS = pop();
             SP += read16(p + 1);
             return;
         case 0xcb: // retf
             ip = pop();
-            CSEG = &mem[(CS = pop()) << 4];
+            CS = pop();
             return;
         case 0xcc: // int3
             ++ip;
@@ -1062,7 +1071,7 @@ void step(uint8_t rep, uint8_t *seg) {
             return;
         case 0xcf: // iret
             ip = pop();
-            CSEG = &mem[(CS = pop()) << 4];
+            CS = pop();
             setf(pop());
             return;
         case 0xd0: // byte r/m, 1
@@ -1238,7 +1247,7 @@ void step(uint8_t rep, uint8_t *seg) {
             break;
         case 0xd7: // xlat
             ++ip;
-            AL = DSEG[BX + AL];
+            AL = DS[BX + AL];
             return;
         case 0xe0: // loopnz/loopne
             return jumpif(p[1], --CX > 0 && !ZF);
@@ -1266,13 +1275,13 @@ void step(uint8_t rep, uint8_t *seg) {
             return;
         case 0xe8: // call disp
             push(ip + 3);
-            ip += 3 + read16(CSEG + ip + 1);
+            ip += 3 + read16(p + 1);
             return;
         case 0xe9: // jmp disp
-            ip += 3 + read16(CSEG + ip + 1);
+            ip += 3 + read16(p + 1);
             return;
         case 0xea: // jmpf
-            CSEG = &mem[(CS = read16(p + 3)) << 4];
+            CS = read16(p + 3);
             ip = read16(p + 1);
             return;
         case 0xeb: // jmp short
@@ -1307,8 +1316,7 @@ void step(uint8_t rep, uint8_t *seg) {
             ip += opr1.modrm(p, 0, seg);
             switch ((p[1] >> 3) & 7) {
                 case 0: // test r/m, imm8
-                    ++ip;
-                    setf8(int8_t(*opr1 & CSEG[ip - 1]), false);
+                    setf8(int8_t(*opr1 & CS[ip++]), false);
                     return;
                 case 2: // not byte r/m
                     opr1 = ~*opr1;
@@ -1345,8 +1353,7 @@ void step(uint8_t rep, uint8_t *seg) {
             ip += opr1.modrm(p, 1, seg);
             switch ((p[1] >> 3) & 7) {
                 case 0: // test r/m, imm16
-                    ip += 2;
-                    setf16(int16_t(*opr1 & read16(CSEG + ip - 2)), false);
+                    setf16(int16_t(*opr1 & read16(&CS[ip += 2] - 2)), false);
                     return;
                 case 2: // not r/m
                     opr1 = ~*opr1;
@@ -1436,16 +1443,16 @@ void step(uint8_t rep, uint8_t *seg) {
                     ip = *opr1;
                     return;
                 case 3: // callf
-                    push(CS);
+                    push(*CS);
                     push(ip);
-                    CSEG = &mem[(CS = read16(opr1.ptr() + 2)) << 4];
+                    CS = read16(opr1.ptr() + 2);
                     ip = *opr1;
                     return;
                 case 4: // jmp
                     ip = *opr1;
                     return;
                 case 5: // jmpf
-                    CSEG = &mem[(CS = read16(opr1.ptr() + 2)) << 4];
+                    CS = read16(opr1.ptr() + 2);
                     ip = *opr1;
                     return;
                 case 6: // push
@@ -1466,7 +1473,7 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0xf4: // hlt
 #endif
     }
-    fprintf(stderr, "%04x:%04x %02x not implemented\n", CS, ip, b);
+    fprintf(stderr, "%04x:%04x %02x not implemented\n", *CS, ip, b);
     exit(1);
 }
 
@@ -1475,10 +1482,8 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "usage: %s bios fdimage\n", argv[0]);
         return 1;
     }
+    ES = SS = DS = 0;
     c3_init(argv[1], argv[2]);
-    for (int i = 0; i < 4; ++i) {
-        segs[i] = &mem[sr[i] << 4];
-    }
     for (int i = 0; i < 256; ++i) {
         int n = 0;
         for (int j = 1; j < 256; j += j) {
@@ -1499,7 +1504,7 @@ int main(int argc, char *argv[]) {
             r8[i + 4] = r8[i] - 1;
         }
     }
-    while (c3_compat()) step(0, 0);
+    while (c3_compat()) step(0, NULL);
 }
 
 // cable3(8086tiny) compatibility
@@ -1524,11 +1529,11 @@ void c3_init(const char *bios, const char *fd) {
 }
 
 bool c3_compat() {
-    return CS && ip;
+    return *CS && ip;
 }
 
 void c3_0f(int n) {
     ip += 2;
-    fprintf(stderr, "%04x:%04x 0f%02x invalid hyper call\n", CS, ip - 2, n);
+    fprintf(stderr, "%04x:%04x 0f%02x invalid hyper call\n", *CS, ip - 2, n);
     exit(1);
 }

@@ -122,7 +122,7 @@ struct Operand {
         return -1;
     }
 
-    inline uint8_t *getseg() {
+    inline uint8_t * getseg() {
         switch (type) {
             case ModRM + 2:
             case ModRM + 3:

@@ -354,7 +354,7 @@ void step(uint8_t rep, uint8_t *seg) {
             AX = setf16(int16_t(AX & read16(p + 1)), false);
             return;
         case 0x26: // es:
-            return step(0, ESEG);
+            return step(rep, ESEG);
         case 0x28: // sub r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
             val = int8_t(dst = *opr1) - int8_t(src = *opr2);
@@ -386,7 +386,7 @@ void step(uint8_t rep, uint8_t *seg) {
             AX = setf16(val, dst < src);
             return;
         case 0x2e: // cs:
-            return step(0, CSEG);
+            return step(rep, CSEG);
         case 0x30: // xor r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
             opr1 = setf8(int8_t(*opr1 ^ *opr2), false);
@@ -412,7 +412,7 @@ void step(uint8_t rep, uint8_t *seg) {
             AX = setf16(int16_t(AX ^ read16(p + 1)), false);
             return;
         case 0x36: // ss:
-            return step(0, SSEG);
+            return step(rep, SSEG);
         case 0x38: // cmp r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
             val = int8_t(dst = *opr1) - int8_t(src = *opr2);
@@ -444,7 +444,7 @@ void step(uint8_t rep, uint8_t *seg) {
             setf16(val, dst < src);
             return;
         case 0x3e: // ds:
-            return step(0, DSEG);
+            return step(rep, DSEG);
         case 0x40: // inc reg16
         case 0x41:
         case 0x42:
@@ -1078,7 +1078,7 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0xf2: // repnz/repne
         case 0xf3: // rep/repz/repe
             ++ip;
-            if (CX) step(b, 0);
+            if (CX) step(b, seg);
             return;
         case 0xf5: // cmc
             ++ip;
@@ -1292,6 +1292,7 @@ int main(int argc, char *argv[]) {
             r8[i + 4] = r8[i] - 1;
         }
     }
+    while (c3_compat()) step(0, 0);
 }
 
 // cable3(8086tiny) compatibility

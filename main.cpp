@@ -220,6 +220,16 @@ inline uint16_t pop() {
     return val;
 }
 
+inline void intr(int n) {
+    push(getf());
+    IF = TF = 0;
+    push(CS);
+    push(ip);
+    uint8_t *v = &mem[n << 2];
+    CS = read16(v + 2);
+    ip = read16(v);
+}
+
 void step(uint8_t rep, uint8_t *seg) {
     Operand opr1, opr2;
     uint8_t *p = CSEG + ip, b = *p;
@@ -919,6 +929,16 @@ void step(uint8_t rep, uint8_t *seg) {
             ip += opr1.modrm(p, 0, seg) + 2;
             opr1 = read16(CSEG + ip - 2);
             return;
+        case 0xcc: // int3
+            ++ip;
+            return intr(3);
+        case 0xcd: // int imm8
+            ip += 2;
+            return intr(p[1]);
+        case 0xce: // into
+            ++ip;
+            if (OF) intr(4);
+            return;
         case 0xd0: // byte r/m, 1
             ip += opr1.modrm(p, 0, seg);
             src = *opr1;
@@ -1308,9 +1328,6 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0xc5: return regrm(&opr1, &opr2, p, "lds", true, 1);
         case 0xca: return getop(&opr1, &opr2, 3, "retf", imm16(read16(p + 1)));
         case 0xcb: // retf
-        case 0xcc: // int3
-        case 0xcd: return getop(&opr1, &opr2, 2, "int", imm8(p[1]));
-        case 0xce: // into
         case 0xcf: // iret
         case 0xd4: if (p[1] == 0x0a) return getop(&opr1, &opr2, 2, "aam");
             else break;

@@ -178,7 +178,7 @@ struct Operand {
 
     inline uint16_t loadf(SReg *seg) {
         uint8_t *p = ptr();
-        if (!p) return **this;
+        if (!p) return operator *();
         *seg = read16(p + 2);
         return read16(p);
     }

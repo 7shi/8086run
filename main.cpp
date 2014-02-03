@@ -12,7 +12,7 @@ void c3_0f();
 uint8_t mem[0x110000], *segs[4];
 uint16_t ip, r[8], sr[4];
 uint8_t *r8[8];
-bool OF, DF, SF, ZF, PF, CF;
+bool OF, DF, IF, TF, SF, ZF, AF, PF, CF;
 bool ptable[256];
 
 #define AX r[0]
@@ -193,15 +193,18 @@ inline int setf16(int value, bool cf) {
 }
 
 inline uint16_t getf() {
-    return 0xf002 | (OF << 11) | (DF << 10)
-            | (SF << 7) | (ZF << 6) | (PF << 2) | CF;
+    return 0xf002 | (OF << 11) | (DF << 10) | (IF << 9) | (TF << 8)
+            | (SF << 7) | (ZF << 6) | (AF << 4) | (PF << 2) | CF;
 }
 
 inline void setf(uint16_t flags) {
     OF = flags & 2048;
     DF = flags & 1024;
+    IF = flags & 512;
+    TF = flags & 256;
     SF = flags & 128;
     ZF = flags & 64;
+    AF = flags & 16;
     PF = flags & 4;
     CF = flags & 1;
 }

@@ -192,6 +192,20 @@ inline int setf16(int value, bool cf) {
     return value;
 }
 
+inline uint16_t getf() {
+    return 0xf002 | (OF << 11) | (DF << 10)
+            | (SF << 7) | (ZF << 6) | (PF << 2) | CF;
+}
+
+inline void setf(uint16_t flags) {
+    OF = flags & 2048;
+    DF = flags & 1024;
+    SF = flags & 128;
+    ZF = flags & 64;
+    PF = flags & 4;
+    CF = flags & 1;
+}
+
 inline void jumpif(int8_t offset, bool c) {
     if (c) {
         ip += 2 + offset;
@@ -684,28 +698,16 @@ void step(uint8_t rep, uint8_t *seg) {
             return;
         case 0x9c: // pushf
             ++ip;
-            push(0xf002 | (OF << 11) | (DF << 10) | (SF << 7) | (ZF << 6) | (PF << 2) | CF);
-            return;
+            return push(getf());
         case 0x9d: // popf
             ++ip;
-            val = pop();
-            OF = val & 2048;
-            DF = val & 1024;
-            SF = val & 128;
-            ZF = val & 64;
-            PF = val & 4;
-            CF = val & 1;
-            return;
+            return setf(pop());
         case 0x9e: // sahf
             ++ip;
-            SF = AH & 128;
-            ZF = AH & 64;
-            PF = AH & 4;
-            CF = AH & 1;
-            return;
+            return setf((getf() & 0xff00) | AH);
         case 0x9f: // lahf
             ++ip;
-            AH = (SF << 7) | (ZF << 6) | (PF << 2) | 2 | CF;
+            AH = getf();
             return;
         case 0xa0: // mov al, [addr]
             ip += 3;

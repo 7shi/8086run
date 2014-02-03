@@ -961,24 +961,24 @@ void step(uint8_t rep, uint8_t *seg) {
             val = *opr1;
             switch ((p[1] >> 3) & 7) {
                 case 0: // rol
-                    for (int i = 0; i < CL; i++)
+                    for (int i = 0; i < CL; ++i)
                         val = (val << 1) | (CF = val & 0x80);
                     opr1 = val;
                     return;
                 case 1: // ror
-                    for (int i = 0; i < CL; i++)
+                    for (int i = 0; i < CL; ++i)
                         val = (val >> 1) | ((CF = val & 1) ? 0x80 : 0);
                     opr1 = val;
                     return;
                 case 2: // rcl
-                    for (int i = 0; i < CL; i++) {
+                    for (int i = 0; i < CL; ++i) {
                         val = (val << 1) | CF;
                         CF = val & 0x100;
                     }
                     opr1 = val;
                     return;
                 case 3: // rcr
-                    for (int i = 0; i < CL; i++) {
+                    for (int i = 0; i < CL; ++i) {
                         bool f = val & 1;
                         val = (val >> 1) | (CF ? 0x80 : 0);
                         CF = f;
@@ -1010,25 +1010,25 @@ void step(uint8_t rep, uint8_t *seg) {
             val = *opr1;
             switch ((p[1] >> 3) & 7) {
                 case 0: // rol
-                    for (int i = 0; i < CL; i++) {
+                    for (int i = 0; i < CL; ++i) {
                         CF = val & 0x8000;
                         opr1 = val = (val << 1) | CF;
                     }
                     return;
                 case 1: // ror
-                    for (int i = 0; i < CL; i++) {
+                    for (int i = 0; i < CL; ++i) {
                         CF = val & 1;
                         opr1 = val = (val >> 1) | (CF ? 0x8000 : 0);
                     }
                     return;
                 case 2: // rcl
-                    for (int i = 0; i < CL; i++) {
+                    for (int i = 0; i < CL; ++i) {
                         opr1 = val = (val << 1) | CF;
                         CF = val & 0x8000;
                     }
                     return;
                 case 3: // rcr
-                    for (int i = 0; i < CL; i++) {
+                    for (int i = 0; i < CL; ++i) {
                         opr1 = val = (val >> 1) | (CF ? 0x8000 : 0);
                         CF = val & 1;
                     }
@@ -1272,7 +1272,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     c3_init(argv[1], argv[2]);
-    for (int i = 0; i < 256; i++) {
+    for (int i = 0; i < 256; ++i) {
         int n = 0;
         for (int j = 1; j < 256; j += j) {
             if (i & j) n++;
@@ -1282,12 +1282,12 @@ int main(int argc, char *argv[]) {
     uint16_t tmp = 0x1234;
     uint8_t *p = (uint8_t *) r;
     if (*(uint8_t *) & tmp == 0x34) {
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 4; ++i) {
             r8[i] = p + i * 2;
             r8[i + 4] = r8[i] + 1;
         }
     } else {
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 4; ++i) {
             r8[i] = p + i * 2 + 1;
             r8[i + 4] = r8[i] - 1;
         }

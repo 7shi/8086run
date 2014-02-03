@@ -397,6 +397,7 @@ void step(uint8_t rep, uint8_t *seg) {
             AX = setf16(int16_t(AX & read16(p + 1)), false);
             return;
         case 0x26: // es:
+            ++ip;
             return step(rep, ESEG);
         case 0x28: // sub r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
@@ -429,6 +430,7 @@ void step(uint8_t rep, uint8_t *seg) {
             AX = setf16(val, dst < src);
             return;
         case 0x2e: // cs:
+            ++ip;
             return step(rep, CSEG);
         case 0x30: // xor r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
@@ -455,6 +457,7 @@ void step(uint8_t rep, uint8_t *seg) {
             AX = setf16(int16_t(AX ^ read16(p + 1)), false);
             return;
         case 0x36: // ss:
+            ++ip;
             return step(rep, SSEG);
         case 0x38: // cmp r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
@@ -487,6 +490,7 @@ void step(uint8_t rep, uint8_t *seg) {
             setf16(val, dst < src);
             return;
         case 0x3e: // ds:
+            ++ip;
             return step(rep, DSEG);
         case 0x40: // inc reg16
         case 0x41:

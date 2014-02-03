@@ -143,21 +143,23 @@ struct Operand {
         return w ? read16(p) : *p;
     }
 
-    inline Operand &operator =(int value) {
+    inline void operator =(int value) {
         if (type == Reg) {
-            if (w)r[v] = value;
-            else*r8[v] = value;
-        } else {
-            uint8_t *p = ptr();
-            if (p) {
-                if (w) {
-                    write16(p, value);
-                } else {
-                    *p = value;
-                }
+            if (w) {
+                r[v] = value;
+            } else {
+                *r8[v] = value;
+            }
+            return;
+        }
+        uint8_t *p = ptr();
+        if (p) {
+            if (w) {
+                write16(p, value);
+            } else {
+                *p = value;
             }
         }
-        return *this;
     }
 };
 

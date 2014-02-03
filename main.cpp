@@ -2,6 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <unistd.h>
+#include <sys/stat.h>
+
+void c3_init(const char *bios);
+void c3_kb();
+void c3_int();
+void c3_0f();
 
 uint8_t mem[0x11000], *segs[4];
 uint16_t ip, r[8], sr[4];
@@ -1264,7 +1271,12 @@ void run(uint8_t rep, uint8_t *seg) {
     exit(1);
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        fprintf(stderr, "usage: %s bios fdimage\n", argv[0]);
+        return 1;
+    }
+    c3_init(argv[1]);
     for (int i = 0; i < 256; i++) {
         int n = 0;
         for (int j = 1; j < 256; j += j) {
@@ -1285,4 +1297,28 @@ int main() {
             r8[i + 4] = r8[i] - 1;
         }
     }
+}
+
+// cable3 compatibility
+
+void c3_init(const char *bios) {
+    CS = 0xf000;
+    ip = 0x100;
+    FILE *f;
+    struct stat st;
+    if (stat(bios, &st) || !(f = fopen(bios, "rb"))) {
+        fprintf(stderr, "can not open bios: %s\n", bios);
+        exit(1);
+    }
+    fread(&mem[0xf0100], 1, st.st_size, f);
+    fclose(f);
+}
+
+void c3_kb() {
+}
+
+void c3_int() {
+}
+
+void c3_0f() {
 }

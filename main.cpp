@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-void c3_init(const char *bios);
+void c3_init(const char *, const char *);
 bool c3_compat();
 void c3_0f();
 
@@ -1271,7 +1271,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "usage: %s bios fdimage\n", argv[0]);
         return 1;
     }
-    c3_init(argv[1]);
+    c3_init(argv[1], argv[2]);
     for (int i = 0; i < 256; i++) {
         int n = 0;
         for (int j = 1; j < 256; j += j) {
@@ -1296,7 +1296,9 @@ int main(int argc, char *argv[]) {
 
 // cable3(8086tiny) compatibility
 
-void c3_init(const char *bios) {
+FILE *fdimg;
+
+void c3_init(const char *bios, const char *fd) {
     CS = 0xf000;
     ip = 0x100;
     FILE *f;
@@ -1307,6 +1309,10 @@ void c3_init(const char *bios) {
     }
     fread(&mem[0xf0100], 1, st.st_size, f);
     fclose(f);
+    if (!(fdimg = fopen(fd, "r+b"))) {
+        fprintf(stderr, "can not open fd image: %s\n", fd);
+        exit(1);
+    }
 }
 
 bool c3_compat() {

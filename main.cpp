@@ -914,6 +914,105 @@ void step(uint8_t rep, uint8_t *seg) {
             ip += 3;
             r[b & 7] = read16(p + 1);
             return;
+        case 0xc0: // byte r/m, imm8 (80186)
+            ip += opr1.modrm(p, 0, seg) + 1;
+            val = *opr1;
+            opr2.v = CSEG[ip - 1];
+            switch ((p[1] >> 3) & 7) {
+                case 0: // rol
+                    for (int i = 0; i < opr2.v; ++i)
+                        val = (val << 1) | (CF = val & 0x80);
+                    opr1 = val;
+                    return;
+                case 1: // ror
+                    for (int i = 0; i < opr2.v; ++i)
+                        val = (val >> 1) | ((CF = val & 1) ? 0x80 : 0);
+                    opr1 = val;
+                    return;
+                case 2: // rcl
+                    for (int i = 0; i < opr2.v; ++i) {
+                        val = (val << 1) | CF;
+                        CF = val & 0x100;
+                    }
+                    opr1 = val;
+                    return;
+                case 3: // rcr
+                    for (int i = 0; i < opr2.v; ++i) {
+                        bool f = val & 1;
+                        val = (val >> 1) | (CF ? 0x80 : 0);
+                        CF = f;
+                    }
+                    opr1 = val;
+                    return;
+                case 4: // shl/sal
+                    if (opr2.v > 0) {
+                        val <<= opr2.v;
+                        opr1 = setf8(int8_t(val), val & 0x100);
+                    }
+                    return;
+                case 5: // shr
+                    if (opr2.v > 0) {
+                        val >>= opr2.v - 1;
+                        opr1 = setf8(int8_t(val >> 1), val & 1);
+                    }
+                    return;
+                case 7: // sar
+                    if (opr2.v > 0) {
+                        val = int8_t(val) >> (opr2.v - 1);
+                        opr1 = setf8(val >> 1, val & 1);
+                    }
+                    return;
+            }
+            break;
+        case 0xc1: // r/m, imm8 (80186)
+            ip += opr1.modrm(p, 1, seg) + 1;
+            val = *opr1;
+            opr2.v = CSEG[ip - 1];
+            switch ((p[1] >> 3) & 7) {
+                case 0: // rol
+                    for (int i = 0; i < opr2.v; ++i) {
+                        CF = val & 0x8000;
+                        opr1 = val = (val << 1) | CF;
+                    }
+                    return;
+                case 1: // ror
+                    for (int i = 0; i < opr2.v; ++i) {
+                        CF = val & 1;
+                        opr1 = val = (val >> 1) | (CF ? 0x8000 : 0);
+                    }
+                    return;
+                case 2: // rcl
+                    for (int i = 0; i < opr2.v; ++i) {
+                        opr1 = val = (val << 1) | CF;
+                        CF = val & 0x8000;
+                    }
+                    return;
+                case 3: // rcr
+                    for (int i = 0; i < opr2.v; ++i) {
+                        opr1 = val = (val >> 1) | (CF ? 0x8000 : 0);
+                        CF = val & 1;
+                    }
+                    return;
+                case 4: // shl/sal
+                    if (opr2.v > 0) {
+                        val <<= opr2.v;
+                        opr1 = setf16(int16_t(val), val & 0x10000);
+                    }
+                    return;
+                case 5: // shr
+                    if (opr2.v > 0) {
+                        val >>= opr2.v - 1;
+                        opr1 = setf16(int16_t(val >> 1), val & 1);
+                    }
+                    return;
+                case 7: // sar
+                    if (opr2.v > 0) {
+                        val = int16_t(val) >> (opr2.v - 1);
+                        opr1 = setf16(val >> 1, val & 1);
+                    }
+                    return;
+            }
+            break;
         case 0xc2: // ret imm16
             ip = pop();
             SP += read16(p + 1);

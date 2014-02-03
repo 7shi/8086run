@@ -1272,6 +1272,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     c3_init(argv[1], argv[2]);
+    for (int i = 0; i < 4; ++i) {
+        segs[i] = &mem[sr[i] << 4];
+    }
     for (int i = 0; i < 256; ++i) {
         int n = 0;
         for (int j = 1; j < 256; j += j) {

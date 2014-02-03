@@ -8,9 +8,9 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-void c3_init(const char *, const char *);
-bool c3_compat();
-void c3_0f(int);
+void init_8t(const char *, const char *);
+bool compat_8t();
+void hypcall_8t(int);
 
 uint8_t mem[0x110000], io[0x10000];
 uint16_t ip, r[8];
@@ -326,7 +326,7 @@ void step(uint8_t rep, SReg *seg) {
             ++ip;
             return push(*CS);
         case 0x0f: // cable3 hyper call
-            return c3_0f(p[1]);
+            return hypcall_8t(p[1]);
         case 0x10: // adc r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
             val = int8_t(dst = *opr1) + int8_t(*opr2) + int(CF);
@@ -1473,7 +1473,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     ES = SS = DS = 0;
-    c3_init(argv[1], argv[2]);
+    init_8t(argv[1], argv[2]);
     for (int i = 0; i < 256; ++i) {
         int n = 0;
         for (int j = 1; j < 256; j += j) {
@@ -1494,5 +1494,5 @@ int main(int argc, char *argv[]) {
             r8[i + 4] = r8[i] - 1;
         }
     }
-    while (c3_compat()) step(0, NULL);
+    while (compat_8t()) step(0, NULL);
 }

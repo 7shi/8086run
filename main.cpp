@@ -6,8 +6,7 @@
 #include <sys/stat.h>
 
 void c3_init(const char *bios);
-void c3_kb();
-void c3_int();
+bool c3_compat();
 void c3_0f();
 
 uint8_t mem[0x11000], *segs[4];
@@ -1295,7 +1294,7 @@ int main(int argc, char *argv[]) {
     }
 }
 
-// cable3 compatibility
+// cable3(8086tiny) compatibility
 
 void c3_init(const char *bios) {
     CS = 0xf000;
@@ -1310,11 +1309,6 @@ void c3_init(const char *bios) {
     fclose(f);
 }
 
-void c3_kb() {
-}
-
-void c3_int() {
-}
-
-void c3_0f() {
+bool c3_compat() {
+    return CS && ip;
 }

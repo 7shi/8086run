@@ -210,7 +210,7 @@ inline uint16_t pop() {
     return val;
 }
 
-void run(uint8_t rep, uint8_t *seg) {
+void step(uint8_t rep, uint8_t *seg) {
     Operand opr1, opr2;
     uint8_t *p = CSEG + ip, b = *p;
     int dst, src, val;
@@ -354,7 +354,7 @@ void run(uint8_t rep, uint8_t *seg) {
             AX = setf16(int16_t(AX & read16(p + 1)), false);
             return;
         case 0x26: // es:
-            return run(0, ESEG);
+            return step(0, ESEG);
         case 0x28: // sub r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
             val = int8_t(dst = *opr1) - int8_t(src = *opr2);
@@ -386,7 +386,7 @@ void run(uint8_t rep, uint8_t *seg) {
             AX = setf16(val, dst < src);
             return;
         case 0x2e: // cs:
-            return run(0, CSEG);
+            return step(0, CSEG);
         case 0x30: // xor r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
             opr1 = setf8(int8_t(*opr1 ^ *opr2), false);
@@ -412,7 +412,7 @@ void run(uint8_t rep, uint8_t *seg) {
             AX = setf16(int16_t(AX ^ read16(p + 1)), false);
             return;
         case 0x36: // ss:
-            return run(0, SSEG);
+            return step(0, SSEG);
         case 0x38: // cmp r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
             val = int8_t(dst = *opr1) - int8_t(src = *opr2);
@@ -444,7 +444,7 @@ void run(uint8_t rep, uint8_t *seg) {
             setf16(val, dst < src);
             return;
         case 0x3e: // ds:
-            return run(0, DSEG);
+            return step(0, DSEG);
         case 0x40: // inc reg16
         case 0x41:
         case 0x42:
@@ -1078,7 +1078,7 @@ void run(uint8_t rep, uint8_t *seg) {
         case 0xf2: // repnz/repne
         case 0xf3: // rep/repz/repe
             ++ip;
-            if (CX) run(b, 0);
+            if (CX) step(b, 0);
             return;
         case 0xf5: // cmc
             ++ip;

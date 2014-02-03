@@ -1042,6 +1042,16 @@ void step(uint8_t rep, SReg *seg) {
         case 0xc3: // ret
             ip = pop();
             return;
+        case 0xc4: // les reg16, r/m
+            ip += opr2.regrm(&opr1, p, 1, seg);
+            ES = read16(opr1.ptr() + 2);
+            opr2 = *opr1;
+            return;
+        case 0xc5: // lds reg16, r/m
+            ip += opr2.regrm(&opr1, p, 1, seg);
+            DS = read16(opr1.ptr() + 2);
+            opr2 = *opr1;
+            return;
         case 0xc6: // mov r/m, imm8
             ip += opr1.modrm(p, 0, seg) + 1;
             opr1 = CS[ip - 1];
@@ -1466,8 +1476,6 @@ void step(uint8_t rep, SReg *seg) {
         case 0x37: // aaa
         case 0x3f: // aas
         case 0x9b: // wait
-        case 0xc4: return regrm(&opr1, &opr2, p, "les", true, 1);
-        case 0xc5: return regrm(&opr1, &opr2, p, "lds", true, 1);
         case 0xd4: // aam
         case 0xd5: // aad
         case 0xf4: // hlt

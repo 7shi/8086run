@@ -9,7 +9,7 @@ void c3_init(const char *, const char *);
 bool c3_compat();
 void c3_0f(int);
 
-uint8_t mem[0x110000], *segs[4];
+uint8_t mem[0x110000], io[0x10000], *segs[4];
 uint16_t ip, r[8], sr[4];
 uint8_t *r8[8];
 bool OF, DF, IF, TF, SF, ZF, AF, PF, CF;
@@ -1105,6 +1105,22 @@ void step(uint8_t rep, uint8_t *seg) {
             return jumpif(p[1], --CX > 0);
         case 0xe3: // jcxz
             return jumpif(p[1], CX == 0);
+        case 0xe4: // in al, imm8
+            ip += 2;
+            AL = io[p[1]];
+            return;
+        case 0xe5: // in ax, imm8
+            ip += 2;
+            AX = read16(io + p[1]);
+            return;
+        case 0xe6: // out imm8, al
+            ip += 2;
+            io[p[1]] = AL;
+            return;
+        case 0xe7: // out imm8, ax
+            ip += 2;
+            write16(io + p[1], AX);
+            return;
         case 0xe8: // call disp
             push(ip + 3);
             ip += 3 + read16(CSEG + ip + 1);
@@ -1114,6 +1130,22 @@ void step(uint8_t rep, uint8_t *seg) {
             return;
         case 0xeb: // jmp short
             ip += 2 + (int8_t) p[1];
+            return;
+        case 0xec: // in al, dx
+            ++ip;
+            AL = io[DX];
+            return;
+        case 0xed: // in ax, dx
+            ++ip;
+            AX = read16(io + DX);
+            return;
+        case 0xee: // out dx, al
+            ++ip;
+            io[DX] = AL;
+            return;
+        case 0xef: // out dx, ax
+            ++ip;
+            write16(io + DX, AX);
             return;
         case 0xf2: // repnz/repne
         case 0xf3: // rep/repz/repe
@@ -1279,15 +1311,7 @@ void step(uint8_t rep, uint8_t *seg) {
             else break;
         case 0xd5: if (p[1] == 0x0a) return getop(&opr1, &opr2, 2, "aad");
             else break;
-        case 0xe4:
-        case 0xe5: return getop(&opr1, &opr2, 2, "in", reg(0, b & 1), imm8(p[1]));
-        case 0xe6:
-        case 0xe7: return getop(&opr1, &opr2, 2, "out", imm8(p[1]), reg(0, b & 1));
         case 0xea: return getop(&opr1, &opr2, 5, "jmpf", far(read32(p + 1)));
-        case 0xec:
-        case 0xed: return getop(&opr1, &opr2, 1, "in", reg(0, b & 1), dx);
-        case 0xee:
-        case 0xef: return getop(&opr1, &opr2, 1, "out", dx, reg(0, b & 1));
         case 0xf4: // hlt
         case 0xfa: // cli
         case 0xfb: // sti

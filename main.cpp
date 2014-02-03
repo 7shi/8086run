@@ -175,6 +175,13 @@ struct Operand {
             }
         }
     }
+
+    inline uint16_t loadf(SReg *seg) {
+        uint8_t *p = ptr();
+        if (!p) return *this;
+        *seg = read16(p + 2);
+        return read16(p);
+    }
 };
 
 inline Operand ptr(uint16_t a, bool w, SReg *seg) {
@@ -1044,13 +1051,11 @@ void step(uint8_t rep, SReg *seg) {
             return;
         case 0xc4: // les reg16, r/m
             ip += opr2.regrm(&opr1, p, 1, seg);
-            ES = read16(opr1.ptr() + 2);
-            opr2 = *opr1;
+            opr2 = opr1.loadf(&ES);
             return;
         case 0xc5: // lds reg16, r/m
             ip += opr2.regrm(&opr1, p, 1, seg);
-            DS = read16(opr1.ptr() + 2);
-            opr2 = *opr1;
+            opr2 = opr1.loadf(&DS);
             return;
         case 0xc6: // mov r/m, imm8
             ip += opr1.modrm(p, 0, seg) + 1;
@@ -1455,15 +1460,13 @@ void step(uint8_t rep, SReg *seg) {
                 case 3: // callf
                     push(*CS);
                     push(ip);
-                    CS = read16(opr1.ptr() + 2);
-                    ip = *opr1;
+                    ip = opr1.loadf(&CS);
                     return;
                 case 4: // jmp
                     ip = *opr1;
                     return;
                 case 5: // jmpf
-                    CS = read16(opr1.ptr() + 2);
-                    ip = *opr1;
+                    ip = opr1.loadf(&CS);
                     return;
                 case 6: // push
                     push(*opr1);

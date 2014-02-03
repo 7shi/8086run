@@ -205,6 +205,16 @@ inline void jumpif(int8_t offset, bool c) {
     }
 }
 
+inline void push(uint16_t val) {
+    write16(SSEG + (SP -= 2), val);
+}
+
+inline uint16_t pop() {
+    uint16_t val = read16(SSEG + SP);
+    SP += 2;
+    return val;
+}
+
 void run(uint8_t rep, uint8_t *seg) {
     Operand opr1, opr2;
     uint8_t *p = mem + ip, b = *p;
@@ -471,9 +481,7 @@ void run(uint8_t rep, uint8_t *seg) {
         case 0x56:
         case 0x57:
             ++ip;
-            val = r[b & 7];
-            SP -= 2;
-            write16(SSEG + SP, val);
+            push(r[b & 7]);
             return;
         case 0x58: // pop reg16
         case 0x59:
@@ -484,8 +492,7 @@ void run(uint8_t rep, uint8_t *seg) {
         case 0x5e:
         case 0x5f:
             ++ip;
-            r[b & 7] = read16(SP);
-            SP += 2;
+            r[b & 7] = pop();
             return;
         case 0x70: // jo
             return jumpif(p[1], OF);
@@ -655,8 +662,7 @@ void run(uint8_t rep, uint8_t *seg) {
             return;
         case 0x8f: // pop r/m
             ip += opr1.modrm(p, 1, seg);
-            opr1 = read16(SP);
-            SP += 2;
+            opr1 = pop();
             return;
         case 0x90: // nop
             ++ip;
@@ -683,13 +689,11 @@ void run(uint8_t rep, uint8_t *seg) {
             return;
         case 0x9c: // pushf
             ++ip;
-            SP -= 2;
-            write16(SSEG + SP, 0xf002 | (OF << 11) | (DF << 10) | (SF << 7) | (ZF << 6) | (PF << 2) | CF);
+            push(0xf002 | (OF << 11) | (DF << 10) | (SF << 7) | (ZF << 6) | (PF << 2) | CF);
             return;
         case 0x9d: // popf
             ++ip;
-            val = read16(SP);
-            SP += 2;
+            val = pop();
             OF = val & 2048;
             DF = val & 1024;
             SF = val & 128;
@@ -869,12 +873,11 @@ void run(uint8_t rep, uint8_t *seg) {
             r[b & 7] = read16(p + 1);
             return;
         case 0xc2: // ret imm16
-            ip = read16(SP);
-            SP += 2 + read16(p + 1);
+            ip = pop();
+            SP += read16(p + 1);
             return;
         case 0xc3: // ret
-            ip = read16(SP);
-            SP += 2;
+            ip = pop();
             return;
         case 0xc6: // mov r/m, imm8
             ip += opr1.modrm(p, 0, seg) + 1;
@@ -1068,8 +1071,7 @@ void run(uint8_t rep, uint8_t *seg) {
         case 0xe3: // jcxz
             return jumpif(p[1], CX == 0);
         case 0xe8: // call disp
-            SP -= 2;
-            write16(SSEG + SP, ip + 3);
+            push(ip + 3);
             ip += 3 + read16(ip + 1);
             return;
         case 0xe9: // jmp disp
@@ -1208,8 +1210,7 @@ void run(uint8_t rep, uint8_t *seg) {
                     opr1 = setf16(int16_t(*opr1) - 1, CF);
                     return;
                 case 2: // call
-                    SP -= 2;
-                    write16(SSEG + SP, ip);
+                    push(ip);
                     ip = *opr1;
                     return;
                 case 3: // callf
@@ -1220,8 +1221,7 @@ void run(uint8_t rep, uint8_t *seg) {
                 case 5: // jmpf
                     break;
                 case 6: // push
-                    SP -= 2;
-                    write16(SSEG + SP, *opr1);
+                    push(*opr1);
                     return;
             }
             break;

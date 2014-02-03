@@ -1545,6 +1545,25 @@ bool c3_compat() {
 
 void c3_0f(int n) {
     ip += 2;
+    switch (n) {
+        case 0:
+            write(1, &AL, 1);
+            return;
+        case 2:
+            if (DL == 1) {
+                fseek(fdimg, ((SI << 4) | BP) << 9, SEEK_SET);
+                fread(&ES[BX], 1, AX, fdimg);
+                return;
+            }
+            break;
+        case 3:
+            if (DL == 1) {
+                fseek(fdimg, ((SI << 4) | BP) << 9, SEEK_SET);
+                fwrite(&ES[BX], 1, AX, fdimg);
+                return;
+            }
+            break;
+    }
     fprintf(stderr, "%04x:%04x 0f%02x invalid hyper call\n", *CS, ip - 2, n);
     exit(1);
 }

@@ -745,6 +745,13 @@ void step(uint8_t rep, uint8_t *seg) {
             ++ip;
             DX = int16_t(AX) < 0 ? 0xffff : 0;
             return;
+        case 0x9a: // callf
+            ip += 5;
+            push(CS);
+            push(ip);
+            CSEG = &mem[(CS = read16(p + 3)) << 4];
+            ip = read16(p + 1);
+            return;
         case 0x9c: // pushf
             ++ip;
             return push(getf());
@@ -1032,6 +1039,15 @@ void step(uint8_t rep, uint8_t *seg) {
             ip += opr1.modrm(p, 0, seg) + 2;
             opr1 = read16(CSEG + ip - 2);
             return;
+        case 0xca: // retf imm16
+            ip = pop();
+            CSEG = &mem[(CS = pop()) << 4];
+            SP += read16(p + 1);
+            return;
+        case 0xcb: // retf
+            ip = pop();
+            CSEG = &mem[(CS = pop()) << 4];
+            return;
         case 0xcc: // int3
             ++ip;
             return intr(3);
@@ -1041,6 +1057,11 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0xce: // into
             ++ip;
             if (OF) intr(4);
+            return;
+        case 0xcf: // iret
+            ip = pop();
+            CSEG = &mem[(CS = pop()) << 4];
+            setf(pop());
             return;
         case 0xd0: // byte r/m, 1
             ip += opr1.modrm(p, 0, seg);
@@ -1248,6 +1269,10 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0xe9: // jmp disp
             ip += 3 + read16(CSEG + ip + 1);
             return;
+        case 0xea: // jmpf
+            CSEG = &mem[(CS = read16(p + 3)) << 4];
+            ip = read16(p + 1);
+            return;
         case 0xeb: // jmp short
             ip += 2 + (int8_t) p[1];
             return;
@@ -1409,12 +1434,18 @@ void step(uint8_t rep, uint8_t *seg) {
                     ip = *opr1;
                     return;
                 case 3: // callf
-                    break;
+                    push(CS);
+                    push(ip);
+                    CSEG = &mem[(CS = read16(opr1.ptr() + 2)) << 4];
+                    ip = *opr1;
+                    return;
                 case 4: // jmp
                     ip = *opr1;
                     return;
                 case 5: // jmpf
-                    break;
+                    CSEG = &mem[(CS = read16(opr1.ptr() + 2)) << 4];
+                    ip = *opr1;
+                    return;
                 case 6: // push
                     push(*opr1);
                     return;
@@ -1425,18 +1456,13 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0x2f: // das
         case 0x37: // aaa
         case 0x3f: // aas
-        case 0x9a: return getop(&opr1, &opr2, 5, "callf", far(read32(p + 1)));
         case 0x9b: // wait
         case 0xc4: return regrm(&opr1, &opr2, p, "les", true, 1);
         case 0xc5: return regrm(&opr1, &opr2, p, "lds", true, 1);
-        case 0xca: return getop(&opr1, &opr2, 3, "retf", imm16(read16(p + 1)));
-        case 0xcb: // retf
-        case 0xcf: // iret
         case 0xd4: if (p[1] == 0x0a) return getop(&opr1, &opr2, 2, "aam");
             else break;
         case 0xd5: if (p[1] == 0x0a) return getop(&opr1, &opr2, 2, "aad");
             else break;
-        case 0xea: return getop(&opr1, &opr2, 5, "jmpf", far(read32(p + 1)));
         case 0xf4: // hlt
 #endif
     }

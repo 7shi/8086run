@@ -66,7 +66,7 @@ inline void write16(uint8_t *p, uint16_t value) {
 }
 
 enum OperandType {
-    Reg, Imm, Addr, Far, Ptr, ModRM
+    Reg, Imm, Ptr, ModRM
 };
 
 struct Operand {
@@ -178,7 +178,7 @@ struct Operand {
 
     inline uint16_t loadf(SReg *seg) {
         uint8_t *p = ptr();
-        if (!p) return *this;
+        if (!p) return **this;
         *seg = read16(p + 2);
         return read16(p);
     }

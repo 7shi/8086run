@@ -262,6 +262,13 @@ void step(uint8_t rep, uint8_t *seg) {
             val = int16_t(dst = AX) + int16_t(read16(p + 1));
             AX = setf16(val, dst > uint16_t(val));
             return;
+        case 0x06: // push es
+            ++ip;
+            return push(ES);
+        case 0x07: // pop es
+            ++ip;
+            ESEG = &mem[(ES = pop()) << 4];
+            return;
         case 0x08: // or r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
             opr1 = setf8(int8_t(*opr1 | *opr2), false);
@@ -286,6 +293,9 @@ void step(uint8_t rep, uint8_t *seg) {
             ip += 3;
             AX = setf16(int16_t(AX | read16(p + 1)), false);
             return;
+        case 0x0e: // push cs
+            ++ip;
+            return push(CS);
         case 0x0f: // cable3 hyper call
             return c3_0f(p[1]);
         case 0x10: // adc r/m, reg8
@@ -318,6 +328,13 @@ void step(uint8_t rep, uint8_t *seg) {
             val = int16_t(dst = AX) + int16_t(read16(p + 1)) + int(CF);
             AX = setf16(val, dst > uint16_t(val));
             return;
+        case 0x16: // push ss
+            ++ip;
+            return push(SS);
+        case 0x17: // pop ss
+            ++ip;
+            SSEG = &mem[(SS = pop()) << 4];
+            return;
         case 0x18: // sbb r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
             val = int8_t(dst = *opr1) - int8_t(src = *opr2 + int(CF));
@@ -347,6 +364,13 @@ void step(uint8_t rep, uint8_t *seg) {
             ip += 3;
             val = int16_t(dst = AX) - int16_t(src = read16(p + 1) + int(CF));
             AX = setf16(val, dst < src);
+            return;
+        case 0x1e: // push ds
+            ++ip;
+            return push(DS);
+        case 0x1f: // pop ds
+            ++ip;
+            DSEG = &mem[(DS = pop()) << 4];
             return;
         case 0x20: // and r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
@@ -1228,13 +1252,6 @@ void step(uint8_t rep, uint8_t *seg) {
             }
             break;
 #if 0
-        case 0x06: // push es
-        case 0x07: // pop es
-        case 0x0e: // push cs
-        case 0x16: // push ss
-        case 0x17: // pop ss
-        case 0x1e: // push ds
-        case 0x1f: // pop ds
         case 0x27: // daa
         case 0x2f: // das
         case 0x37: // aaa

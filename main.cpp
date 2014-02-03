@@ -230,7 +230,7 @@ inline void intr(int n) {
     push(CS);
     push(ip);
     uint8_t *v = &mem[n << 2];
-    CS = read16(v + 2);
+    CSEG = &mem[(CS = read16(v + 2)) << 4];
     ip = read16(v);
 }
 

@@ -1459,10 +1459,8 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0x9b: // wait
         case 0xc4: return regrm(&opr1, &opr2, p, "les", true, 1);
         case 0xc5: return regrm(&opr1, &opr2, p, "lds", true, 1);
-        case 0xd4: if (p[1] == 0x0a) return getop(&opr1, &opr2, 2, "aam");
-            else break;
-        case 0xd5: if (p[1] == 0x0a) return getop(&opr1, &opr2, 2, "aad");
-            else break;
+        case 0xd4: // aam
+        case 0xd5: // aad
         case 0xf4: // hlt
 #endif
     }

@@ -53,7 +53,7 @@ inline void write16(uint8_t *p, uint16_t value) {
 }
 
 enum OperandType {
-    Reg, SReg, Imm, Addr, Far, Ptr, ModRM
+    Reg, Imm, Addr, Far, Ptr, ModRM
 };
 
 struct Operand {
@@ -156,13 +156,6 @@ struct Operand {
         return *this;
     }
 };
-
-Operand dx(Reg, true, 2, 0);
-Operand cl(Reg, false, 1, 0);
-Operand es(SReg, true, 0, 0);
-Operand cs(SReg, true, 1, 0);
-Operand ss(SReg, true, 2, 0);
-Operand ds(SReg, true, 3, 0);
 
 inline Operand far(uint32_t a, uint8_t *seg) {
     return Operand(Far, false, (int) a, seg);

@@ -1262,7 +1262,7 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0xfb: // sti
 #endif
     }
-    fprintf(stderr, "%04x %02x not implemented\n", ip, b);
+    fprintf(stderr, "%04x:%04x %02x not implemented\n", CS, ip, b);
     exit(1);
 }
 

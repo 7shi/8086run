@@ -1,18 +1,20 @@
 TARGET   = 8086run
+CC       = gcc
 CXX      = g++
-CXXFLAGS = -Wall -g
+CFLAGS   = -Wall -g
+CXXFLAGS = $(CFLAGS)
 LDFLAGS  =
-SOURCES  = main.cpp
-OBJECTS  = $(SOURCES:%.cpp=%.o)
 
 all: $(TARGET)
 
-.SUFFIXES: .cpp .o
-.cpp.o:
+$(TARGET): main.o 8086tiny.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+
+main.o: main.cpp
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-$(TARGET): $(OBJECTS)
-	$(CXX) $(CXXFLAGS) -o $@ $(OBJECTS) $(LDFLAGS)
+8086tiny.o: 8086tiny.c
+	$(CC) $(CFLAGS) -o $@ -c $<
 
 clean:
-	rm -f $(TARGET) $(TARGET).exe $(OBJECTS) *core
+	rm -f $(TARGET) $(TARGET).exe *.o *core

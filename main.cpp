@@ -3,14 +3,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <stdint.h>
-#include <unistd.h>
-#include <sys/stat.h>
 
-void init_8t(const char *, const char *);
-bool compat_8t();
-void hypcall_8t(int);
+extern "C" void init_8t(const char *, const char *);
+extern "C" int compat_8t();
+extern "C" void hypcall_8t(int);
 
 uint8_t mem[0x110000], io[0x10000];
 uint16_t ip, r[8];
@@ -246,7 +243,7 @@ inline uint16_t pop() {
     return val;
 }
 
-inline void intr(int n) {
+extern "C" void intr(int n) {
     push(getf());
     IF = TF = 0;
     push(*CS);
@@ -1472,8 +1469,9 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "usage: %s bios fdimage\n", argv[0]);
         return 1;
     }
-    ES = SS = DS = 0;
     init_8t(argv[1], argv[2]);
+    CS = *CS;
+    ES = SS = DS = 0;
     for (int i = 0; i < 256; ++i) {
         int n = 0;
         for (int j = 1; j < 256; j += j) {

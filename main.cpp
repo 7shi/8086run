@@ -694,9 +694,18 @@ void step(uint8_t rep, uint8_t *seg) {
             ip += opr2.regrm(&opr1, p, 1, seg);
             opr1 = *opr2;
             return;
+        case 0x8c: // mov r/m, sreg
+            ip += opr1.modrm(p, 1, seg);
+            opr1 = sr[(p[1] >> 3) & 3];
+            return;
         case 0x8d: // lea reg16, r/m
             ip += opr2.regrm(&opr1, p, 1, seg);
             opr1 = opr2.addr();
+            return;
+        case 0x8e: // mov sreg, r/m
+            ip += opr2.modrm(p, 1, seg);
+            opr1.v = (p[1] >> 3) & 3;
+            segs[opr1.v] = &mem[(sr[opr1.v] = *opr2) << 4];
             return;
         case 0x8f: // pop r/m
             ip += opr1.modrm(p, 1, seg);
@@ -1256,8 +1265,6 @@ void step(uint8_t rep, uint8_t *seg) {
         case 0x2f: // das
         case 0x37: // aaa
         case 0x3f: // aas
-        case 0x8c: return regrm(&opr1, &opr2, p, "mov", false, 2);
-        case 0x8e: return regrm(&opr1, &opr2, p, "mov", true, 2);
         case 0x9a: return getop(&opr1, &opr2, 5, "callf", far(read32(p + 1)));
         case 0x9b: // wait
         case 0xc4: return regrm(&opr1, &opr2, p, "les", true, 1);

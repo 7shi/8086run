@@ -93,12 +93,12 @@ struct Operand {
                 set(ModRM + rm, w, (int16_t) read16(p + 2), seg);
                 return 4;
         }
-        set(Reg, w, rm, 0);
+        set(Reg, w, rm, NULL);
         return 2;
     }
 
     inline size_t regrm(Operand *opr, uint8_t *p, bool w, uint8_t *seg) {
-        opr->set(Reg, w, (p[1] >> 3) & 7, 0);
+        opr->set(Reg, w, (p[1] >> 3) & 7, NULL);
         return modrm(p, w, seg);
     }
 

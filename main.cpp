@@ -1,3 +1,6 @@
+// This file is in the public domain.
+// derived from 7run: https://bitbucket.org/7shi/i8086tools
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -13,10 +13,6 @@
 #include <fcntl.h>
 #endif
 
-#ifndef NO_GRAPHICS
-#include "SDL.h"
-#endif
-
 // Emulator system constants
 
 #define IO_PORT_COUNT 0x10000
@@ -149,10 +145,6 @@ unsigned int op_source, op_dest, rm_addr, op_to_addr, op_from_addr, i_data0, i_d
 int i_data1r, op_result, disk[3], scratch_int;
 time_t clock_buf;
 
-#ifndef NO_GRAPHICS
-SDL_Surface *sdl_screen;
-#endif
-
 // Helper functions
 
 // Set carry flag
@@ -212,17 +204,6 @@ int set_flags(int new_flags) {
     return 0;
 }
 
-// Refresh SDL display from emulated Hercules graphics card video memory
-#ifndef NO_GRAPHICS
-
-void video_mem_update() {
-    for (scratch_int = GRAPHICS_X * GRAPHICS_Y; scratch_int--;)
-        ((unsigned*) sdl_screen->pixels)[scratch_int] = -!!(1 << (7 - scratch_int % 8) & mem[scratch_int / (GRAPHICS_X * 4) * (GRAPHICS_X / 8) + scratch_int % GRAPHICS_X / 8 + ((88 + io_ports[0x3B8] / 128 * 4 + scratch_int / GRAPHICS_X % 4) << 13)]);
-
-    SDL_Flip(sdl_screen);
-}
-#endif
-
 // Execute INT #interrupt_num on the emulated machine
 
 int pc_interrupt(int interrupt_num) {
@@ -270,11 +251,6 @@ int get_reg_addr(int reg_id) {
 // Emulator entry point
 
 int main(int argc, char **argv) {
-    // Initialise GDL for graphics output
-#ifndef NO_GRAPHICS
-    SDL_Init(SDL_INIT_VIDEO);
-#endif
-
     // regs16 and reg8 point to F000:0, the start of memory-mapped registers
     regs16 = (unsigned short *) (regs8 = mem + REGS_BASE);
     // CS is initialised to F000
@@ -679,21 +655,6 @@ int main(int argc, char **argv) {
         if (!++inst_counter) {
             // Set flag to execute an INT 8 as soon as appropriate (see below)
             int8_asap = 1;
-#ifndef NO_GRAPHICS
-            if (io_ports[0x3B8] & 2) {
-                // Hercules card is in graphics mode. If we don't already have an SDL window open, set it up
-                SDL_PumpEvents();
-                if (!sdl_screen)
-                    sdl_screen = SDL_SetVideoMode(GRAPHICS_X, GRAPHICS_Y, 32, 0);
-
-                // Update the display from video RAM
-                video_mem_update();
-            } else if (sdl_screen) // Application has gone back to text mode, so close the SDL window
-            {
-                SDL_Quit();
-                sdl_screen = 0;
-            }
-#endif
         }
 
         // Application has set trap flag, so fire INT 1

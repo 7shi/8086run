@@ -1248,6 +1248,14 @@ void step(uint8_t rep, uint8_t *seg) {
             ++ip;
             CF = true;
             return;
+        case 0xfa: // cli
+            ++ip;
+            IF = false;
+            return;
+        case 0xfb: // sti
+            ++ip;
+            IF = true;
+            return;
         case 0xfc: // cld
             ++ip;
             DF = false;
@@ -1313,8 +1321,6 @@ void step(uint8_t rep, uint8_t *seg) {
             else break;
         case 0xea: return getop(&opr1, &opr2, 5, "jmpf", far(read32(p + 1)));
         case 0xf4: // hlt
-        case 0xfa: // cli
-        case 0xfb: // sti
 #endif
     }
     fprintf(stderr, "%04x:%04x %02x not implemented\n", CS, ip, b);

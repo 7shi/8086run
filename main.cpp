@@ -102,7 +102,7 @@ struct Operand {
         return modrm(p, w, seg);
     }
 
-    int addr() {
+    inline int addr() {
         switch (type) {
             case Ptr: return uint16_t(v);
             case ModRM + 0: return uint16_t(BX + SI + v);

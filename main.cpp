@@ -34,8 +34,8 @@ bool ptable[256];
 #define BH *r8[7]
 
 struct SReg {
-    uint16_t v;
     uint8_t *p;
+    uint16_t v;
 
     inline uint16_t operator *() {
         return v;

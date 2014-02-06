@@ -59,7 +59,7 @@ struct SReg {
 void
 debug(FILE *f) {
     fprintf(f,
-            "%04x %04x %04x %04x-%04x %04x %04x %04x-%c%c%c%c%c%c%c%c%c-%04x %04x %04x-%04x:%04x %02x%02x%02x\n",
+            "%04x %04x %04x %04x-%04x %04x %04x %04x %c%c%c%c%c%c%c%c%c %04x %04x %04x %04x:%04x %02x%02x%02x\n",
             AX, BX, CX, DX, SP, BP, SI, DI,
             "-O"[OF], "-D"[DF], "-I"[IF], "-T"[TF], "-S"[SF], "-Z"[ZF], "-A"[AF], "-P"[PF], "-C"[CF],
             *ES, *SS, *DS, *CS, ip, CS[ip], CS[ip + 1], CS[ip + 2]);

@@ -1036,11 +1036,11 @@ void step(uint8_t rep, SReg *seg) {
             return;
         case 0xc4: // les reg16, r/m
             ip += opr2.regrm(&opr1, p, 1, seg);
-            opr2 = opr1.loadf(&ES);
+            opr1 = opr2.loadf(&ES);
             return;
         case 0xc5: // lds reg16, r/m
             ip += opr2.regrm(&opr1, p, 1, seg);
-            opr2 = opr1.loadf(&DS);
+            opr1 = opr2.loadf(&DS);
             return;
         case 0xc6: // mov r/m, imm8
             ip += opr1.modrm(p, 0, seg) + 1;

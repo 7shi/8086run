@@ -786,8 +786,9 @@ void step(uint8_t rep, SReg *seg) {
             return;
         case 0xa4: // movsb
             ++ip;
+            if (!seg) seg = &DS;
             do {
-                ES[DI] = DS[SI];
+                ES[DI] = (*seg)[SI];
                 if (DF) {
                     SI--;
                     DI--;
@@ -800,8 +801,9 @@ void step(uint8_t rep, SReg *seg) {
             return;
         case 0xa5: // movsw
             ++ip;
+            if (!seg) seg = &DS;
             do {
-                write16(&ES[DI], read16(&DS[SI]));
+                write16(&ES[DI], read16(&(*seg)[SI]));
                 if (DF) {
                     SI -= 2;
                     DI -= 2;
@@ -814,8 +816,9 @@ void step(uint8_t rep, SReg *seg) {
             return;
         case 0xa6: // cmpsb
             ++ip;
+            if (!seg) seg = &DS;
             do {
-                val = int8_t(dst = DS[SI]) - int8_t(src = ES[DI]);
+                val = int8_t(dst = (*seg)[SI]) - int8_t(src = ES[DI]);
                 setf8(val, dst < src);
                 if (DF) {
                     SI--;
@@ -829,8 +832,9 @@ void step(uint8_t rep, SReg *seg) {
             return;
         case 0xa7: // cmpsw
             ++ip;
+            if (!seg) seg = &DS;
             do {
-                val = int16_t(dst = read16(&DS[SI])) - int16_t(src = read16(&ES[DI]));
+                val = int16_t(dst = read16(&(*seg)[SI])) - int16_t(src = read16(&ES[DI]));
                 setf16(val, dst < src);
                 if (DF) {
                     SI -= 2;
@@ -870,8 +874,9 @@ void step(uint8_t rep, SReg *seg) {
             return;
         case 0xac: // lodsb
             ++ip;
+            if (!seg) seg = &DS;
             do {
-                AL = DS[SI];
+                AL = (*seg)[SI];
                 if (DF) SI--;
                 else SI++;
                 if (rep) CX--;
@@ -879,8 +884,9 @@ void step(uint8_t rep, SReg *seg) {
             return;
         case 0xad: // lodsw
             ++ip;
+            if (!seg) seg = &DS;
             do {
-                AX = read16(&DS[SI]);
+                AX = read16(&(*seg)[SI]);
                 if (DF) SI -= 2;
                 else SI += 2;
                 if (rep) CX--;
@@ -1265,7 +1271,7 @@ void step(uint8_t rep, SReg *seg) {
             break;
         case 0xd7: // xlat
             ++ip;
-            AL = DS[BX + AL];
+            AL = (seg ? *seg : DS)[BX + AL];
             return;
         case 0xe0: // loopnz/loopne
             return jumpif(p[1], --CX > 0 && !ZF);

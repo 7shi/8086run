@@ -962,6 +962,7 @@ void step(uint8_t rep, SReg *seg) {
                     if (opr2.v > 0) {
                         val <<= opr2.v;
                         opr1 = setf8(int8_t(val), val & 0x100);
+                        OF = CF != (int8_t(*opr1) < 0);
                     }
                     return;
                 case 5: // shr
@@ -1014,6 +1015,7 @@ void step(uint8_t rep, SReg *seg) {
                     if (opr2.v > 0) {
                         val <<= opr2.v;
                         opr1 = setf16(int16_t(val), val & 0x10000);
+                        OF = CF != (int16_t(*opr1) < 0);
                     }
                     return;
                 case 5: // shr
@@ -1106,6 +1108,7 @@ void step(uint8_t rep, SReg *seg) {
                     return;
                 case 4: // shl/sal
                     opr1 = setf8(int8_t(src) << 1, src & 0x80);
+                    OF = CF != (int8_t(*opr1) < 0);
                     return;
                 case 5: // shr
                     opr1 = setf8(int8_t(src >> 1), src & 1);
@@ -1143,6 +1146,7 @@ void step(uint8_t rep, SReg *seg) {
                     return;
                 case 4: // shl/sal
                     opr1 = setf16(int16_t(src) << 1, src & 0x8000);
+                    OF = CF != (int16_t(*opr1) < 0);
                     return;
                 case 5: // shr
                     opr1 = setf16(int16_t(src >> 1), src & 1);
@@ -1187,6 +1191,7 @@ void step(uint8_t rep, SReg *seg) {
                     if (CL > 0) {
                         val <<= CL;
                         opr1 = setf8(int8_t(val), val & 0x100);
+                        OF = CF != (int8_t(*opr1) < 0);
                     }
                     return;
                 case 5: // shr
@@ -1238,6 +1243,7 @@ void step(uint8_t rep, SReg *seg) {
                     if (CL > 0) {
                         val <<= CL;
                         opr1 = setf16(int16_t(val), val & 0x10000);
+                        OF = CF != (int16_t(*opr1) < 0);
                     }
                     return;
                 case 5: // shr

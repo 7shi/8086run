@@ -669,7 +669,7 @@ void step(uint8_t rep, SReg *seg) {
                     return;
                 case 7: // cmp
                     val = int16_t(dst = *opr1) - int16_t(src = opr2.v);
-                    setf16(val, dst < src);
+                    setf16(val, dst < uint16_t(src));
                     return;
             }
             break;

@@ -966,14 +966,17 @@ void step(uint8_t rep, SReg *seg) {
                     return;
                 case 5: // shr
                     if (opr2.v > 0) {
+                        bool f = int8_t(val) < 0;
                         val >>= opr2.v - 1;
                         opr1 = setf8(int8_t(val >> 1), val & 1);
+                        OF = f;
                     }
                     return;
                 case 7: // sar
                     if (opr2.v > 0) {
                         val = int8_t(val) >> (opr2.v - 1);
                         opr1 = setf8(val >> 1, val & 1);
+                        OF = false;
                     }
                     return;
             }
@@ -1015,14 +1018,17 @@ void step(uint8_t rep, SReg *seg) {
                     return;
                 case 5: // shr
                     if (opr2.v > 0) {
+                        bool f = int16_t(val) < 0;
                         val >>= opr2.v - 1;
                         opr1 = setf16(int16_t(val >> 1), val & 1);
+                        OF = f;
                     }
                     return;
                 case 7: // sar
                     if (opr2.v > 0) {
                         val = int16_t(val) >> (opr2.v - 1);
                         opr1 = setf16(val >> 1, val & 1);
+                        OF = false;
                     }
                     return;
             }
@@ -1103,7 +1109,7 @@ void step(uint8_t rep, SReg *seg) {
                     return;
                 case 5: // shr
                     opr1 = setf8(int8_t(src >> 1), src & 1);
-                    OF = src & 0x80;
+                    OF = int8_t(src) < 0;
                     return;
                 case 7: // sar
                     opr1 = setf8(int8_t(src) >> 1, src & 1);
@@ -1140,7 +1146,7 @@ void step(uint8_t rep, SReg *seg) {
                     return;
                 case 5: // shr
                     opr1 = setf16(int16_t(src >> 1), src & 1);
-                    OF = src & 0x8000;
+                    OF = int16_t(src) < 0;
                     return;
                 case 7: // sar
                     opr1 = setf16(int16_t(src) >> 1, src & 1);
@@ -1185,14 +1191,17 @@ void step(uint8_t rep, SReg *seg) {
                     return;
                 case 5: // shr
                     if (CL > 0) {
+                        bool f = int8_t(val) < 0;
                         val >>= CL - 1;
                         opr1 = setf8(int8_t(val >> 1), val & 1);
+                        OF = f;
                     }
                     return;
                 case 7: // sar
                     if (CL > 0) {
                         val = int8_t(val) >> (CL - 1);
                         opr1 = setf8(val >> 1, val & 1);
+                        OF = false;
                     }
                     return;
             }
@@ -1233,14 +1242,17 @@ void step(uint8_t rep, SReg *seg) {
                     return;
                 case 5: // shr
                     if (CL > 0) {
+                        bool f = int16_t(val) < 0;
                         val >>= CL - 1;
                         opr1 = setf16(int16_t(val >> 1), val & 1);
+                        OF = f;
                     }
                     return;
                 case 7: // sar
                     if (CL > 0) {
                         val = int16_t(val) >> (CL - 1);
                         opr1 = setf16(val >> 1, val & 1);
+                        OF = false;
                     }
                     return;
             }

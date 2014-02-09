@@ -1061,7 +1061,7 @@ void step(uint8_t rep, SReg *seg) {
             opr1 = CS[ip - 1];
             return;
         case 0xc7: // mov r/m, imm16
-            ip += opr1.modrm(p, 0, seg) + 2;
+            ip += opr1.modrm(p, 1, seg) + 2;
             opr1 = read16(&CS[ip] - 2);
             return;
         case 0xca: // retf imm16

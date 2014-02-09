@@ -127,16 +127,22 @@ void hypcall_8t(int n) {
         case 2: // READ_DISK
             if (DL == 1) {
                 ip += 2;
-                fseek(fdimg, ((SI << 4) | BP) << 9, SEEK_SET);
-                fread(ES.p + BX, 1, AX, fdimg);
+                if (fseek(fdimg, ((SI << 4) | BP) << 9, SEEK_SET) >= 0) {
+                    AL = fread(ES.p + BX, 1, AX, fdimg);
+                } else {
+                    AL = 0;
+                }
                 return;
             }
             break;
         case 3: // WRITE_DISK
             if (DL == 1) {
                 ip += 2;
-                fseek(fdimg, ((SI << 4) | BP) << 9, SEEK_SET);
-                fwrite(ES.p + BX, 1, AX, fdimg);
+                if (fseek(fdimg, ((SI << 4) | BP) << 9, SEEK_SET) >= 0) {
+                    AL = fwrite(ES.p + BX, 1, AX, fdimg);
+                } else {
+                    AL = 0;
+                }
                 return;
             }
             break;

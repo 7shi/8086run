@@ -1,7 +1,7 @@
 TARGET   = 8086run
 CC       = gcc
 CXX      = g++
-CFLAGS   = -Wall -g
+CFLAGS   = -O1 -Wall -g
 CXXFLAGS = $(CFLAGS)
 LDFLAGS  =
 

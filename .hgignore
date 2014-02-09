@@ -3,3 +3,4 @@ syntax: glob
 *.exe
 *core
 nbproject/private
+bios

@@ -5,7 +5,10 @@ CFLAGS   = -Wall -g
 CXXFLAGS = $(CFLAGS)
 LDFLAGS  =
 
-all: $(TARGET)
+all: $(TARGET) bios
+
+bios: bios.asm
+	nasm $<
 
 $(TARGET): main.o 8086tiny.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
@@ -17,4 +20,4 @@ main.o: main.cpp
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 clean:
-	rm -f $(TARGET) $(TARGET).exe *.o *core
+	rm -f $(TARGET) $(TARGET).exe *.o *core bios

@@ -56,21 +56,6 @@ bios_entry:
 
 	push	ax
 
-	; The emulator requires a few control registers in memory to always be zero for correct
-	; instruction decoding (in particular, register look-up operations). These are the
-	; emulator's zero segment (ZS) and always-zero flag (XF). Because the emulated memory
-	; space is uninitialised, we need to be sure these values are zero before doing anything
-	; else. The instructions we need to use to set them must not rely on look-up operations.
-	; So e.g. MOV to memory is out but string operations are fine.
-
-	cld
-
-	xor	ax, ax
-	mov	di, 24
-	stosw			; Set ZS = 0
-	mov	di, 49
-	stosb			; Set XF = 0
-
 	; Now we can do whatever we want!
 
 	; Set up Hercules graphics support. We start with the adapter in text mode

@@ -662,7 +662,7 @@ void step(uint8_t rep, SReg *seg) {
                     return;
                 case 5: // sub
                     val = int16_t(dst = *opr1) - int16_t(src = opr2.v);
-                    opr1 = setf16(val, dst < src);
+                    opr1 = setf16(val, dst < uint16_t(src));
                     return;
                 case 6: // xor
                     opr1 = setf16(int16_t(*opr1 ^ opr2.v), false);

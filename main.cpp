@@ -1332,6 +1332,9 @@ void step(uint8_t rep, SReg *seg) {
             ++ip;
             if (CX) step(b, seg);
             return;
+        case 0xf4: // hlt
+            ++ip;
+            return;
         case 0xf5: // cmc
             ++ip;
             CF = !CF;
@@ -1490,7 +1493,6 @@ void step(uint8_t rep, SReg *seg) {
         case 0x9b: // wait
         case 0xd4: // aam
         case 0xd5: // aad
-        case 0xf4: // hlt
 #endif
     }
     fprintf(stderr, "%04x:%04x %02x not implemented\n", *CS, p - &CS[0], b);

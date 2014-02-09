@@ -54,37 +54,7 @@ bios_entry:
 	push	cs
 	pop	es
 
-	push	ax
-
 	; Now we can do whatever we want!
-
-	; Set up Hercules graphics support. We start with the adapter in text mode
-
-	push	dx
-
-	mov	dx, 0x3b8
-	mov	al, 0
-	out	dx, al		; Set Hercules support to text mode
-
-	mov	dx, 0		; The IOCCC version of the emulator also uses I/O port 0 as a graphics mode flag
-	out	dx, al
-
-	mov	dx, 0x3b4
-	mov	al, 1		; Hercules CRTC "horizontal displayed" register select
-	out	dx, al
-	mov	dx, 0x3b5
-	mov	al, 0x2d	; 0x2D = 45 (* 16) = 720 pixels wide (GRAPHICS_X)
-	out	dx, al
-	mov	dx, 0x3b4
-	mov	al, 6		; Hercules CRTC "vertical displayed" register select
-	out	dx, al
-	mov	dx, 0x3b5
-	mov	al, 0x57	; 0x57 = 87 (* 4) = 348 pixels high (GRAPHICS_Y)
-	out	dx, al
-
-	pop	dx
-
-	pop	ax
 
 	; Check cold boot/warm boot. We initialise disk parameters on cold boot only
 
@@ -250,8 +220,6 @@ next_out:
 
 	cmp	dx, 0x40	; We deal with the PIT channel 0 later
 	je	next_out
-	cmp	dx, 0x3B8	; We deal with the Hercules port later, too
-	je	next_out
 
 	out	dx, al
 
@@ -259,14 +227,6 @@ next_out:
 	jl	next_out
 
 	mov	dx, 0x3DA	; CGA refresh port
-	mov	al, 0
-	out	dx, al
-
-	mov	dx, 0x3BA	; Hercules detection port
-	mov	al, 0
-	out	dx, al
-
-	mov	dx, 0x3B8	; Hercules video mode port
 	mov	al, 0
 	out	dx, al
 
@@ -609,33 +569,9 @@ skip_timer_increment:
 
 	inc	byte [cs:int8_call_cnt]
 
-	; A Hercules graphics adapter flips bit 7 of I/O port 3BA, every now and then, apparently!
-	mov	dx, 0x3BA
-	in 	al, dx
-	xor	al, 0x80
-	out	dx, al
-
-	; We now need to convert the data in I/O port 0x3B8 (Hercules settings) to a new format in
-	; I/O port 0, which we use in the IOCCC version of the emulator for code compactness.
-	; Basically this port will contain 0 if the Hercules graphics is disabled, 2 otherwise. Note,
-	; this is not used in 8086tiny.
-
-	mov	dx, 0x3B8
-	in	al, dx
-	test	al, 2
-	jnz	herc_gfx_mode
-
 	; Hercules is in text mode, so set I/O port 0 to 0
 
 	mov	al, 0
-	jmp	io_init_continue
-
-herc_gfx_mode:
-
-	mov	al, 2
-
-io_init_continue:
-
 	mov	dx, 0
 	out	dx, al
 

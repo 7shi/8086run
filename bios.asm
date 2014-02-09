@@ -634,8 +634,6 @@ i8_end:
 	pop	bx
 	pop	ax
 
-	int	0x1c
-
 	iret
 
 ; ************************* INT 10h handler - video services
@@ -2281,12 +2279,6 @@ int1a:
 
 	jmp	reach_stack_clc
 
-; ************************* INT 1Ch - the other timer interrupt
-
-int1c:
-
-	iret
-
 ; ************************* INT 1Eh - diskette parameter table
 
 int1e:
@@ -2366,6 +2358,7 @@ inte:
 intf:
 int18:
 int1b:
+int1c:
 int1d:
 
 iret

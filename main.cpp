@@ -539,86 +539,50 @@ void step(uint8_t rep, SReg *seg) {
         case 0x7f: // jnle/jg
             return jumpif(p[1], !(ZF || SF != OF));
         case 0x80: // r/m, imm8
-            ip += opr1.modrm(p, 0, seg) + 1;
-            switch ((p[1] >> 3) & 7) {
-                case 0: // add
-                    val = *opr1 + int8_t(CS[ip - 1]);
-                    CF = opr1 > val;
-                    opr1 = opr1.setf(val);
-                    return;
-                case 1: // or
-                    CF = false;
-                    opr1 = opr1.setf(*opr1 | int8_t(CS[ip - 1]));
-                    return;
-                case 2: // adc
-                    val = *opr1 + (src = int8_t(CS[ip - 1]) + CF);
-                    CF = opr1 > val || (CF && !src);
-                    opr1 = opr1.setf(val);
-                    return;
-                case 3: // sbb
-                    val = *opr1 - (src = int8_t(CS[ip - 1]) + CF);
-                    CF = opr1 < src || (CF && !src);
-                    opr1 = opr1.setf(val);
-                    return;
-                case 4: // and
-                    CF = false;
-                    opr1 = opr1.setf(*opr1 & int8_t(CS[ip - 1]));
-                    return;
-                case 5: // sub
-                    val = *opr1 - (src = int8_t(CS[ip - 1]));
-                    CF = opr1 < src;
-                    opr1 = opr1.setf(val);
-                    return;
-                case 6: // xor
-                    CF = false;
-                    opr1 = opr1.setf(int8_t(*opr1 ^ CS[ip - 1]));
-                    return;
-                case 7: // cmp
-                    val = *opr1 - (src = int8_t(CS[ip - 1]));
-                    CF = opr1 < src;
-                    opr1.setf(val);
-                    return;
-            }
-            break;
         case 0x81: // r/m, imm16
         case 0x83: // r/m, imm8 (signed extend to 16bit)
-            ip += opr1.modrm(p, 1, seg) + 2;
-            opr2.v = b == 0x81 ? read16(&CS[ip] - 2) : (int8_t) CS[--ip - 1];
+            ip += opr1.modrm(p, b & 1, seg);
+            if (b == 0x83) {
+                opr2.set(Ptr, 0, ip, &CS);
+            } else {
+                opr2.set(Ptr, opr1.w, ip, &CS);
+            }
+            ip += 1 + opr2.w;
             switch ((p[1] >> 3) & 7) {
                 case 0: // add
-                    val = *opr1 + int16_t(opr2.v);
+                    val = *opr1 + *opr2;
                     CF = opr1 > val;
                     opr1 = opr1.setf(val);
                     return;
                 case 1: // or
                     CF = false;
-                    opr1 = opr1.setf(*opr1 | int16_t(opr2.v));
+                    opr1 = opr1.setf(*opr1 | *opr2);
                     return;
                 case 2: // adc
-                    val = *opr1 + (src = int16_t(opr2.v) + CF);
+                    val = *opr1 + (src = *opr2 + CF);
                     CF = opr1 > val || (CF && !src);
                     opr1 = opr1.setf(val);
                     return;
                 case 3: // sbb
-                    val = *opr1 - (src = int16_t(opr2.v) + CF);
+                    val = *opr1 - (src = *opr2 + CF);
                     CF = opr1 < src || (CF && !src);
                     opr1 = opr1.setf(val);
                     return;
                 case 4: // and
                     CF = false;
-                    opr1 = opr1.setf(*opr1 & int16_t(opr2.v));
+                    opr1 = opr1.setf(*opr1 & *opr2);
                     return;
                 case 5: // sub
-                    val = *opr1 - int16_t(src = opr2.v);
+                    val = *opr1 - (src = *opr2);
                     CF = opr1 < src;
                     opr1 = opr1.setf(val);
                     return;
                 case 6: // xor
                     CF = false;
-                    opr1 = opr1.setf(int16_t(*opr1 ^ opr2.v));
+                    opr1 = opr1.setf(*opr1 ^ *opr2);
                     return;
                 case 7: // cmp
-                    val = *opr1 - int16_t(src = opr2.v);
+                    val = *opr1 - (src = *opr2);
                     CF = opr1 < src;
                     opr1.setf(val);
                     return;

@@ -930,6 +930,16 @@ void step(uint8_t rep, SReg *seg) {
             ++ip;
             AL = (seg ? *seg : DS)[BX + AL];
             return;
+        case 0xd8: // esc (8087 FPU)
+        case 0xd9:
+        case 0xda:
+        case 0xdb:
+        case 0xdc:
+        case 0xdd:
+        case 0xde:
+        case 0xdf:
+            ip += 2;
+            return;
         case 0xe0: // loopnz/loopne
             return jumpif(p[1], --CX > 0 && !ZF);
         case 0xe1: // loopz/loope

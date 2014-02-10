@@ -307,6 +307,65 @@ extern "C" void intr(int n) {
     ip = read16(v);
 }
 
+inline void shift(Operand *opr, int c, uint8_t *p) {
+    int val = opr->u(), m = opr->w ? 0x8000 : 0x80;
+    switch ((p[1] >> 3) & 7) {
+        case 0: // rol
+            for (int i = 0; i < c; ++i)
+                val = (val << 1) | (CF = val & m);
+            OF = CF ^ bool(val & m);
+            *opr = val;
+            break;
+        case 1: // ror
+            for (int i = 0; i < c; ++i)
+                val = (val >> 1) | ((CF = val & 1) ? m : 0);
+            OF = CF ^ bool(val & (m >> 1));
+            *opr = val;
+            break;
+        case 2: // rcl
+            for (int i = 0; i < c; ++i) {
+                val = (val << 1) | CF;
+                CF = val & (m << 1);
+            }
+            OF = CF ^ bool(val & m);
+            *opr = val;
+            break;
+        case 3: // rcr
+            for (int i = 0; i < c; ++i) {
+                bool f1 = val & 1, f2 = val & m;
+                val = (val >> 1) | (CF ? m : 0);
+                OF = CF ^ f2;
+                CF = f1;
+            }
+            *opr = val;
+            break;
+        case 4: // shl/sal
+            if (c > 0) {
+                val <<= c;
+                CF = val & (m << 1);
+                OF = CF != bool(val & m);
+                *opr = opr->setf(val);
+            }
+            break;
+        case 5: // shr
+            if (c > 0) {
+                val >>= c - 1;
+                CF = val & 1;
+                OF = val & m;
+                *opr = opr->setf(val >> 1);
+            }
+            break;
+        case 7: // sar
+            if (c > 0) {
+                val = int8_t(val) >> (c - 1);
+                CF = val & 1;
+                OF = false;
+                *opr = opr->setf(val >> 1);
+            }
+            break;
+    }
+}
+
 void step(uint8_t rep, SReg *seg) {
     Operand opr1, opr2;
     uint8_t *p = &CS[ip], b = *p;
@@ -809,110 +868,9 @@ void step(uint8_t rep, SReg *seg) {
             r[b & 7] = read16(p + 1);
             return;
         case 0xc0: // byte r/m, imm8 (80186)
-            ip += opr1.modrm(p, 0, seg) + 1;
-            val = uint8_t(*opr1);
-            opr2.v = CS[ip - 1];
-            switch ((p[1] >> 3) & 7) {
-                case 0: // rol
-                    for (int i = 0; i < opr2.v; ++i)
-                        val = (val << 1) | (CF = val & 0x80);
-                    opr1 = val;
-                    return;
-                case 1: // ror
-                    for (int i = 0; i < opr2.v; ++i)
-                        val = (val >> 1) | ((CF = val & 1) ? 0x80 : 0);
-                    opr1 = val;
-                    return;
-                case 2: // rcl
-                    for (int i = 0; i < opr2.v; ++i) {
-                        val = (val << 1) | CF;
-                        CF = val & 0x100;
-                    }
-                    opr1 = val;
-                    return;
-                case 3: // rcr
-                    for (int i = 0; i < opr2.v; ++i) {
-                        bool f = val & 1;
-                        val = (val >> 1) | (CF ? 0x80 : 0);
-                        CF = f;
-                    }
-                    opr1 = val;
-                    return;
-                case 4: // shl/sal
-                    if (opr2.v > 0) {
-                        val <<= opr2.v;
-                        CF = val & 0x100;
-                        opr1 = opr1.setf(val);
-                    }
-                    return;
-                case 5: // shr
-                    if (opr2.v > 0) {
-                        val >>= opr2.v - 1;
-                        CF = val & 1;
-                        opr1 = opr1.setf(val >> 1);
-                    }
-                    return;
-                case 7: // sar
-                    if (opr2.v > 0) {
-                        val = int8_t(val) >> (opr2.v - 1);
-                        CF = val & 1;
-                        opr1 = opr1.setf(val >> 1);
-                    }
-                    return;
-            }
-            break;
-        case 0xc1: // r/m, imm16 (80186)
-            ip += opr1.modrm(p, 1, seg) + 1;
-            val = uint16_t(*opr1);
-            opr2.v = CS[ip - 1];
-            switch ((p[1] >> 3) & 7) {
-                case 0: // rol
-                    for (int i = 0; i < opr2.v; ++i) {
-                        CF = val & 0x8000;
-                        opr1 = val = (val << 1) | CF;
-                    }
-                    return;
-                case 1: // ror
-                    for (int i = 0; i < opr2.v; ++i) {
-                        CF = val & 1;
-                        opr1 = val = (val >> 1) | (CF ? 0x8000 : 0);
-                    }
-                    return;
-                case 2: // rcl
-                    for (int i = 0; i < opr2.v; ++i) {
-                        opr1 = val = (val << 1) | CF;
-                        CF = val & 0x8000;
-                    }
-                    return;
-                case 3: // rcr
-                    for (int i = 0; i < opr2.v; ++i) {
-                        opr1 = val = (val >> 1) | (CF ? 0x8000 : 0);
-                        CF = val & 1;
-                    }
-                    return;
-                case 4: // shl/sal
-                    if (opr2.v > 0) {
-                        val <<= opr2.v;
-                        CF = val & 0x10000;
-                        opr1 = opr1.setf(val);
-                    }
-                    return;
-                case 5: // shr
-                    if (opr2.v > 0) {
-                        val >>= opr2.v - 1;
-                        CF = val & 1;
-                        opr1 = opr1.setf(val >> 1);
-                    }
-                    return;
-                case 7: // sar
-                    if (opr2.v > 0) {
-                        val = int16_t(val) >> (opr2.v - 1);
-                        CF = val & 1;
-                        opr1 = opr1.setf(val >> 1);
-                    }
-                    return;
-            }
-            break;
+        case 0xc1: // r/m, imm8 (80186)
+            ip += opr1.modrm(p, b & 1, seg) + 1;
+            return shift(&opr1, CS[ip - 1], p);
         case 0xc2: // ret imm16
             ip = pop();
             SP += read16(p + 1);
@@ -961,190 +919,13 @@ void step(uint8_t rep, SReg *seg) {
             setf(pop());
             return;
         case 0xd0: // byte r/m, 1
-            ip += opr1.modrm(p, 0, seg);
-            src = uint8_t(*opr1);
-            switch ((p[1] >> 3) & 7) {
-                case 0: // rol
-                    CF = src & 0x80;
-                    opr1 = (src << 1) | CF;
-                    OF = CF ^ bool(src & 0x40);
-                    return;
-                case 1: // ror
-                    CF = src & 1;
-                    opr1 = (src >> 1) | (CF ? 0x80 : 0);
-                    OF = CF ^ bool(src & 0x80);
-                    return;
-                case 2: // rcl
-                    opr1 = (src << 1) | CF;
-                    CF = src & 0x80;
-                    OF = CF ^ bool(src & 0x40);
-                    return;
-                case 3: // rcr
-                    opr1 = (src >> 1) | (CF ? 0x80 : 0);
-                    OF = CF ^ bool(src & 0x80);
-                    CF = src & 1;
-                    return;
-                case 4: // shl/sal
-                    CF = src & 0x80;
-                    opr1 = setf8(int8_t(src) << 1);
-                    OF = CF != (*opr1 < 0);
-                    return;
-                case 5: // shr
-                    CF = src & 1;
-                    opr1 = setf8(int8_t(src >> 1));
-                    OF = int8_t(src) < 0;
-                    return;
-                case 7: // sar
-                    CF = src & 1;
-                    opr1 = setf8(int8_t(src) >> 1);
-                    OF = false;
-                    return;
-            }
-            break;
         case 0xd1: // r/m, 1
-            ip += opr1.modrm(p, 1, seg);
-            src = uint16_t(*opr1);
-            switch ((p[1] >> 3) & 7) {
-                case 0: // rol
-                    CF = src & 0x8000;
-                    opr1 = (src << 1) | CF;
-                    OF = CF ^ bool(src & 0x4000);
-                    return;
-                case 1: // ror
-                    CF = src & 1;
-                    opr1 = (src >> 1) | (CF ? 0x8000 : 0);
-                    OF = CF ^ bool(src & 0x8000);
-                    return;
-                case 2: // rcl
-                    opr1 = (src << 1) | CF;
-                    CF = src & 0x8000;
-                    OF = CF ^ bool(src & 0x4000);
-                    return;
-                case 3: // rcr
-                    opr1 = (src >> 1) | (CF ? 0x8000 : 0);
-                    OF = CF ^ bool(src & 0x8000);
-                    CF = src & 1;
-                    return;
-                case 4: // shl/sal
-                    CF = src & 0x8000;
-                    opr1 = setf16(int16_t(src) << 1);
-                    OF = CF != (*opr1 < 0);
-                    return;
-                case 5: // shr
-                    CF = src & 1;
-                    opr1 = setf16(int16_t(src >> 1));
-                    OF = int16_t(src) < 0;
-                    return;
-                case 7: // sar
-                    CF = src & 1;
-                    opr1 = setf16(int16_t(src) >> 1);
-                    OF = false;
-                    return;
-            }
-            break;
+            ip += opr1.modrm(p, b & 1, seg);
+            return shift(&opr1, 1, p);
         case 0xd2: // byte r/m, cl
-            ip += opr1.modrm(p, 0, seg);
-            val = uint8_t(*opr1);
-            switch ((p[1] >> 3) & 7) {
-                case 0: // rol
-                    for (int i = 0; i < CL; ++i)
-                        val = (val << 1) | (CF = val & 0x80);
-                    opr1 = val;
-                    return;
-                case 1: // ror
-                    for (int i = 0; i < CL; ++i)
-                        val = (val >> 1) | ((CF = val & 1) ? 0x80 : 0);
-                    opr1 = val;
-                    return;
-                case 2: // rcl
-                    for (int i = 0; i < CL; ++i) {
-                        val = (val << 1) | CF;
-                        CF = val & 0x100;
-                    }
-                    opr1 = val;
-                    return;
-                case 3: // rcr
-                    for (int i = 0; i < CL; ++i) {
-                        bool f = val & 1;
-                        val = (val >> 1) | (CF ? 0x80 : 0);
-                        CF = f;
-                    }
-                    opr1 = val;
-                    return;
-                case 4: // shl/sal
-                    if (CL > 0) {
-                        val <<= CL;
-                        CF = val & 0x100;
-                        opr1 = opr1.setf(val);
-                    }
-                    return;
-                case 5: // shr
-                    if (CL > 0) {
-                        val >>= CL - 1;
-                        CF = val & 1;
-                        opr1 = opr1.setf(val >> 1);
-                    }
-                    return;
-                case 7: // sar
-                    if (CL > 0) {
-                        val = int8_t(val) >> (CL - 1);
-                        CF = val & 1;
-                        opr1 = opr1.setf(val >> 1);
-                    }
-                    return;
-            }
-            break;
         case 0xd3: // r/m, cl
-            ip += opr1.modrm(p, 1, seg);
-            val = uint16_t(*opr1);
-            switch ((p[1] >> 3) & 7) {
-                case 0: // rol
-                    for (int i = 0; i < CL; ++i) {
-                        CF = val & 0x8000;
-                        opr1 = val = (val << 1) | CF;
-                    }
-                    return;
-                case 1: // ror
-                    for (int i = 0; i < CL; ++i) {
-                        CF = val & 1;
-                        opr1 = val = (val >> 1) | (CF ? 0x8000 : 0);
-                    }
-                    return;
-                case 2: // rcl
-                    for (int i = 0; i < CL; ++i) {
-                        opr1 = val = (val << 1) | CF;
-                        CF = val & 0x8000;
-                    }
-                    return;
-                case 3: // rcr
-                    for (int i = 0; i < CL; ++i) {
-                        opr1 = val = (val >> 1) | (CF ? 0x8000 : 0);
-                        CF = val & 1;
-                    }
-                    return;
-                case 4: // shl/sal
-                    if (CL > 0) {
-                        val <<= CL;
-                        CF = val & 0x10000;
-                        opr1 = opr1.setf(val);
-                    }
-                    return;
-                case 5: // shr
-                    if (CL > 0) {
-                        val >>= CL - 1;
-                        CF = val & 1;
-                        opr1 = opr1.setf(val >> 1);
-                    }
-                    return;
-                case 7: // sar
-                    if (CL > 0) {
-                        val = int16_t(val) >> (CL - 1);
-                        CF = val & 1;
-                        opr1 = opr1.setf(val >> 1);
-                    }
-                    return;
-            }
-            break;
+            ip += opr1.modrm(p, b & 1, seg);
+            return shift(&opr1, CL, p);
         case 0xd7: // xlat
             ++ip;
             AL = (seg ? *seg : DS)[BX + AL];

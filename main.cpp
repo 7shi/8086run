@@ -207,11 +207,16 @@ struct Operand {
         return seg ? &(*seg)[v] : NULL;
     }
 
-    inline int operator *() const {
-        if (type == Reg) return w ? int16_t(r[v]) : int8_t(*r8[v]);
+    inline int u() const {
+        if (type == Reg) return w ? r[v] : *r8[v];
         uint8_t *p = ptr();
         if (!p) return v;
-        return w ? int16_t(read16(p)) : int8_t(*p);
+        return w ? read16(p) : *p;
+    }
+
+    inline int operator *() const {
+        int ret = u();
+        return w ? int16_t(ret) : int8_t(ret);
     }
 
     inline void operator =(int value) {
@@ -235,19 +240,17 @@ struct Operand {
 
     inline uint16_t loadf(SReg *seg) {
         uint8_t *p = ptr();
-        if (!p) return operator *();
+        if (!p) return u();
         *seg = read16(p + 2);
         return read16(p);
     }
 
     inline bool operator>(int val) {
-        if (w) return uint16_t(operator *()) > uint16_t(val);
-        return uint8_t(operator *()) > uint8_t(val);
+        return u() > (w ? uint16_t(val) : uint8_t(val));
     }
 
     inline bool operator<(int val) {
-        if (w) return uint16_t(operator *()) < uint16_t(val);
-        return uint8_t(operator *()) < uint8_t(val);
+        return u() < (w ? uint16_t(val) : uint8_t(val));
     }
 
     inline int setf(int value) {

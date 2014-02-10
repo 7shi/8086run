@@ -95,14 +95,13 @@ int compat_8t() {
 
     if (int8_asap && IF && !TF) {
         // Keyboard and timer driver. This may need changing for UNIX/non-UNIX platforms
-#ifdef _WIN32
         intr(8);
+#ifdef _WIN32
         if ((int8_asap = kbhit())) {
             mem[0x4A6] = getch();
             intr(7);
         }
 #else
-        intr(8);
         if (int8_asap = read(0, mem + 0x4A6, 1)) intr(7);
 #endif
     }

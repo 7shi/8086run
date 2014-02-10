@@ -196,6 +196,13 @@ struct Operand {
         return 2 + w;
     }
 
+    inline size_t getopr(Operand *opr, uint8_t b, uint8_t *p, SReg *seg) {
+        if (b & 4) {
+            return aimm(opr, b & 1, p + 1);
+        }
+        return regrm(opr, p, b & 2, b & 1, seg);
+    }
+
     inline uint8_t * ptr() const {
         return seg ? &(*seg)[v] : NULL;
     }
@@ -306,14 +313,9 @@ void step(uint8_t rep, SReg *seg) {
         case 0x01: // add r/m, reg16
         case 0x02: // add reg8, r/m
         case 0x03: // add reg16, r/m
-            ip += opr1.regrm(&opr2, p, b & 2, b & 1, seg);
-            val = *opr1 + *opr2;
-            CF = opr1 > val;
-            opr1 = opr1.setf(val);
-            return;
         case 0x04: // add al, imm8
         case 0x05: // add ax, imm16
-            ip += opr1.aimm(&opr2, b & 1, p + 1);
+            ip += opr1.getopr(&opr2, b, p, seg);
             val = *opr1 + *opr2;
             CF = opr1 > val;
             opr1 = opr1.setf(val);
@@ -329,13 +331,9 @@ void step(uint8_t rep, SReg *seg) {
         case 0x09: // or r/m, reg16
         case 0x0a: // or reg8, r/m
         case 0x0b: // or reg16, r/m
-            ip += opr1.regrm(&opr2, p, b & 2, b & 1, seg);
-            CF = false;
-            opr1 = opr1.setf(*opr1 | *opr2);
-            return;
         case 0x0c: // or al, imm8
         case 0x0d: // or ax, imm16
-            ip += opr1.aimm(&opr2, b & 1, p + 1);
+            ip += opr1.getopr(&opr2, b, p, seg);
             CF = false;
             opr1 = opr1.setf(*opr1 | *opr2);
             return;
@@ -348,14 +346,9 @@ void step(uint8_t rep, SReg *seg) {
         case 0x11: // adc r/m, reg16
         case 0x12: // adc reg8, r/m
         case 0x13: // adc reg16, r/m
-            ip += opr1.regrm(&opr2, p, b & 2, b & 1, seg);
-            val = *opr1 + (src = *opr2 + CF);
-            CF = opr1 > val || (CF && !src);
-            opr1 = opr1.setf(val);
-            return;
         case 0x14: // adc al, imm8
         case 0x15: // adc ax, imm16
-            ip += opr1.aimm(&opr2, b & 1, p + 1);
+            ip += opr1.getopr(&opr2, b, p, seg);
             val = *opr1 + (src = *opr2 + CF);
             CF = opr1 > val || (CF && !src);
             opr1 = opr1.setf(val);
@@ -371,14 +364,9 @@ void step(uint8_t rep, SReg *seg) {
         case 0x19: // sbb r/m, reg16
         case 0x1a: // sbb reg8, r/m
         case 0x1b: // sbb reg16, r/m
-            ip += opr1.regrm(&opr2, p, b & 2, b & 1, seg);
-            val = *opr1 - (src = *opr2 + CF);
-            CF = opr1 < src || (CF && !src);
-            opr1 = opr1.setf(val);
-            return;
         case 0x1c: // sbb al, imm8
         case 0x1d: // sbb ax, imm16
-            ip += opr1.aimm(&opr2, b & 1, p + 1);
+            ip += opr1.getopr(&opr2, b, p, seg);
             val = *opr1 - (src = *opr2 + CF);
             CF = opr1 < src || (CF && !src);
             opr1 = opr1.setf(val);
@@ -394,13 +382,9 @@ void step(uint8_t rep, SReg *seg) {
         case 0x21: // and r/m, reg16
         case 0x22: // and reg8, r/m
         case 0x23: // and reg16, r/m
-            ip += opr1.regrm(&opr2, p, b & 2, b & 1, seg);
-            CF = false;
-            opr1 = opr1.setf(*opr1 & *opr2);
-            return;
         case 0x24: // and al, imm8
         case 0x25: // and ax, imm16
-            ip += opr1.aimm(&opr2, b & 1, p + 1);
+            ip += opr1.getopr(&opr2, b, p, seg);
             CF = false;
             opr1 = opr1.setf(*opr1 & *opr2);
             return;
@@ -411,14 +395,9 @@ void step(uint8_t rep, SReg *seg) {
         case 0x29: // sub r/m, reg16
         case 0x2a: // sub reg8, r/m
         case 0x2b: // sub reg16, r/m
-            ip += opr1.regrm(&opr2, p, b & 2, b & 1, seg);
-            val = *opr1 - (src = *opr2);
-            CF = opr1 < src;
-            opr1 = opr1.setf(val);
-            return;
         case 0x2c: // sub al, imm8
         case 0x2d: // sub ax, imm16
-            ip += opr1.aimm(&opr2, b & 1, p + 1);
+            ip += opr1.getopr(&opr2, b, p, seg);
             val = *opr1 - (src = *opr2);
             CF = opr1 < src;
             opr1 = opr1.setf(val);
@@ -430,13 +409,9 @@ void step(uint8_t rep, SReg *seg) {
         case 0x31: // xor r/m, reg16
         case 0x32: // xor reg8, r/m
         case 0x33: // xor reg16, r/m
-            ip += opr1.regrm(&opr2, p, b & 2, b & 1, seg);
-            CF = false;
-            opr1 = opr1.setf(*opr1 ^ *opr2);
-            return;
         case 0x34: // xor al, imm8
         case 0x35: // xor ax, imm16
-            ip += opr1.aimm(&opr2, b & 1, p + 1);
+            ip += opr1.getopr(&opr2, b, p, seg);
             CF = false;
             opr1 = opr1.setf(*opr1 ^ *opr2);
             return;
@@ -447,14 +422,9 @@ void step(uint8_t rep, SReg *seg) {
         case 0x39: // cmp r/m, reg16
         case 0x3a: // cmp reg8, r/m
         case 0x3b: // cmp reg16, r/m
-            ip += opr1.regrm(&opr2, p, b & 2, b & 1, seg);
-            val = *opr1 - (src = *opr2);
-            CF = opr1 < src;
-            opr1.setf(val);
-            return;
         case 0x3c: // cmp al, imm8
         case 0x3d: // cmp ax, imm16
-            ip += opr1.aimm(&opr2, b & 1, p + 1);
+            ip += opr1.getopr(&opr2, b, p, seg);
             val = *opr1 - (src = *opr2);
             CF = opr1 < src;
             opr1.setf(val);

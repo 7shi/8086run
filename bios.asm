@@ -640,8 +640,6 @@ i8_end:
 
 int10:
 
-	cmp	ah, 0x00 ; Set video mode
-	je	int10_set_vm
 	cmp	ah, 0x01 ; Set cursor shape
 	je	int10_set_cshape
 	cmp	ah, 0x02 ; Set cursor position
@@ -654,64 +652,11 @@ int10:
 	je	int10_scrolldown
 	cmp	ah, 0x08 ; Get character at cursor
 	je	int10_charatcur
-	cmp	ah, 0x09 ; Write char and attribute
-	je	int10_write_char_attrib
 	cmp	ah, 0x0e ; Write character at cursor position
 	je	int10_write_char
 	cmp	ah, 0x0f ; Get video mode
 	je	int10_get_vm
-	;cmp	ah, 0x12 ; Feature check (EGA)
-	;je	int10_ega_features
-	;cmp	ah, 0x1a ; Feature check
-	;je	int10_features
 
-	iret
-
-  int10_set_vm:
-
-	push	dx
-	push	cx
-	push	bx
-
-	cmp	al, 7		; If an app tries to set Hercules text mode 7, actually set mode 3 (we do not support mode 7's video memory buffer at B000:0)
-	je	int10_set_vm_3
-	cmp	al, 2		; Same for text mode 2 (mono)
-	je	int10_set_vm_3
-
-	jmp	int10_set_vm_continue
-
-  int10_set_vm_3:
-
-	mov	al, 3
-
-  int10_set_vm_continue:
-
-	mov	[cs:vidmode], al
-
-	mov	bh, 7		; Black background, white foreground
-	call	clear_screen	; ANSI clear screen
-
-	cmp	byte [cs:vidmode], 6
-	je	set6
-	mov	al, 0x30
-	jmp	svmn
-
-  set6:
-
-	mov	al, 0x3f
-
-  svmn:
-
-	; Take Hercules adapter out of graphics mode when resetting video mode via int 10
-	push	ax
-	mov	dx, 0x3B8
-	mov	al, 0
-	out	dx, al
-	pop	ax
-
-	pop	bx
-	pop	cx
-	pop	dx
 	iret
 
   int10_set_cshape:
@@ -1415,173 +1360,6 @@ int10_scroll_down_vmem_update:
 
 	iret
 
-  int10_write_char_attrib:
-
-	; First we write the character to a fake "video memory" location. This is so that
-	; we can later retrieve it using the get character at cursor function, which
-	; GWBASIC uses in this way to see what has been typed.
-
-	push	ds
-	push	es
-	push	cx
-	push	bp
-	push	bx
-	push	bx
-
-	mov	bx, 0x40
-	mov	es, bx
-
-	mov	bx, 0xb000
-	mov	ds, bx
-
-	mov	bx, 0
-	mov	bl, [es:curpos_x-bios_data]
-	shl	bx, 1
-	mov	[bx], al
-
-	pop	bx
-
-	push	bx
-	push	ax
-
-	mov	bh, bl
-	and	bl, 7		; Foreground colour now in bl
-
-	mov	bp, bx		; Convert from CGA to ANSI
-	and	bp, 0xff
-	mov	bl, byte [cs:bp+colour_table]
-
-	and	bh, 8		; Bright attribute now in bh
-cpu	186
-	shr	bh, 3
-cpu	8086
-
-	mov	al, 0x1B	; Escape
-	extended_putchar_al
-	mov	al, '['		; ANSI
-	extended_putchar_al
-	mov	al, bh		; Bright attribute
-	call	puts_decimal_al
-	mov	al, ';'
-	extended_putchar_al
-	mov	al, bl		; Foreground colour
-	call	puts_decimal_al
-	mov	al, 'm'		; Set cursor position command
-	extended_putchar_al
-
-	pop	ax
-	pop	bx
-
-	push	bx
-	push	ax
-
-	mov	bh, bl
-	shr	bl, 1
-	shr	bl, 1
-	shr	bl, 1
-	shr	bl, 1
-	and	bl, 7		; Background colour now in bl
-
-	mov	bp, bx		; Convert from CGA to ANSI
-	and	bp, 0xff
-	mov	bl, byte [cs:bp+colour_table]
-
-	add	bl, 10
-	rol	bh, 1
-	and	bh, 1		; Bright attribute now in bh (not used right now)
-
-	mov	al, 0x1B	; Escape
-	extended_putchar_al
-	mov	al, '['		; ANSI
-	extended_putchar_al
-	mov	al, bl		; Background colour
-	call	puts_decimal_al
-	mov	al, 'm'		; Set cursor position command
-	extended_putchar_al
-	
-	pop	ax
-	pop	bx
-
-	push	ax
-
-    out_another_char:
-
-	extended_putchar_al
-	dec	cx
-	cmp	cx, 0
-	jne	out_another_char
-
-	mov	al, 0x1B	; Escape
-	extended_putchar_al
-	mov	al, '['		; ANSI
-	extended_putchar_al
-	mov	al, '0'		; Reset attributes
-	extended_putchar_al
-	mov	al, 'm'
-	extended_putchar_al
-
-	cmp	al, 0x08
-	jne	int10_write_char_attrib_inc_x
-
-	dec	byte [es:curpos_x-bios_data]
-	cmp	byte [es:curpos_x-bios_data], 0
-	jg	int10_write_char_attrib_done
-
-	mov	byte [es:curpos_x-bios_data], 0
-	jmp	int10_write_char_attrib_done
-
-    int10_write_char_attrib_inc_x:
-
-	cmp	al, 0x0A	; New line?
-	je	int10_write_char_attrib_newline
-
-	cmp	al, 0x0D	; Carriage return?
-	jne	int10_write_char_attrib_not_cr
-
-	mov	byte [es:curpos_x-bios_data],0
-	jmp	int10_write_char_attrib_done
-
-    int10_write_char_attrib_not_cr:
-
-	inc	byte [es:curpos_x-bios_data]
-	cmp	byte [es:curpos_x-bios_data], 80
-	jge	int10_write_char_attrib_newline
-	jmp	int10_write_char_attrib_done
-
-    int10_write_char_attrib_newline:
-
-	mov	byte [es:curpos_x-bios_data], 0
-	inc	byte [es:curpos_y-bios_data]
-
-	cmp	byte [es:curpos_y-bios_data], 25
-	jb	int10_write_char_attrib_done
-	mov	byte [es:curpos_y-bios_data], 24
-
-	push	cx
-	push	dx
-
-	mov	bl, 1
-	mov	cx, 0
-	mov	dx, 0x184f
-
-	pushf
-	push	cs
-	call	int10_scroll_up_vmem_update
-
-	pop	dx
-	pop	cx
-
-    int10_write_char_attrib_done:
-
-	pop	ax
-	pop	bx
-	pop	bp
-	pop	cx
-	pop	es
-	pop	ds
-
-	iret
-
   int10_get_vm:
 
 	mov	ah, 80 ; Number of columns
@@ -1589,23 +1367,6 @@ cpu	8086
 	mov	bh, 0
 
 	iret
-
-  ;int10_ega_features:
-
-;	cmp	bl, 0x10
-;	jne	i10_unsup
-;
-;	mov	bx, 0
-;	mov	cx, 0x0005
-;	iret
-;
- ; int10_features:
-;
-;	; Signify we have CGA display
-;
-;	mov	al, 0x1a
-;	mov	bx, 0x0202
-;	iret
 
 ; ************************* INT 11h - get equipment list
 
@@ -1940,65 +1701,6 @@ wr_fine:
 	mov	ah, 0 ; Disk not changed
 	jmp	reach_stack_clc
 
-; ************************* INT 14h - serial port functions
-
-int14:
-	cmp	ah, 0
-	je	int14_init
-
-	iret
-
-  int14_init:
-
-	mov	ax, 0
-
-	iret
-
-; ************************* INT 15h - get system configuration
-
-int15:	; Here we do not support any of the functions, and just return
-	; a function not supported code - like the original IBM PC/XT does.
-
-	; cmp	ah, 0xc0
-	; je	int15_sysconfig
-	; cmp	ah, 0x41
-	; je	int15_waitevent
-	; cmp	ah, 0x4f
-	; je	int15_intercept
-	; cmp	ah, 0x88
-	; je	int15_getextmem
-
-; Otherwise, function not supported
-
-	mov	ah, 0x86
-
-	jmp	reach_stack_stc
-
-;  int15_sysconfig: ; Return address of system configuration table in ROM
-;
-;	mov	bx, 0xf000
-;	mov	es, bx
-;	mov	bx, rom_config
-;	mov	ah, 0
-;
-;	jmp	reach_stack_clc
-;
-;  int15_waitevent: ; Events not supported
-;
-;	mov	ah, 0x86
-;
-;	jmp	reach_stack_stc
-;
-;  int15_intercept: ; Keyboard intercept
-;
-;	jmp	reach_stack_stc
-;
-;  int15_getextmem: ; Extended memory not supported
-;
-;	mov	ah,0x86
-;
-;	jmp	reach_stack_stc
-
 ; ************************* INT 16h handler - keyboard
 
 int16:
@@ -2107,24 +1809,6 @@ int16:
 	pop	es
 
 	iret
-
-; ************************* INT 17h handler - printer
-
-int17:
-	cmp	ah, 0x01
-	je	int17_initprint ; Initialise printer
-
-	iret
-
-  int17_initprint:
-
-	mov	ah, 0
-	iret
-
-; ************************* INT 19h = reboot
-
-int19:
-	jmp	boot
 
 ; ************************* INT 1Ah - clock
 
@@ -2281,19 +1965,7 @@ int1a:
 
 ; ************************* INT 1Eh - diskette parameter table
 
-int1e:
-
-		db 0xdf ; Step rate 2ms, head unload time 240ms
-		db 0x02 ; Head load time 4 ms, non-DMA mode 0
-		db 0x25 ; Byte delay until motor turned off
-		db 0x02 ; 512 bytes per sector
 int1e_spt	db 0xff	; 18 sectors per track (1.44MB)
-		db 0x1B ; Gap between sectors for 3.5" floppy
-		db 0xFF ; Data length (ignored)
-		db 0x54 ; Gap length when formatting
-		db 0xF6 ; Format filler byte
-		db 0x0F ; Head settle time (1 ms)
-		db 0x08 ; Motor start time in 1/8 seconds
 
 ; ************************* INT 41h - hard disk parameter table
 
@@ -2356,10 +2028,15 @@ intc:
 intd:
 inte:
 intf:
+int14:
+int15:
+int17:
 int18:
+int19:
 int1b:
 int1c:
 int1d:
+int1e:
 
 iret
 

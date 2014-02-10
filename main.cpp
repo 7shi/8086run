@@ -94,8 +94,48 @@ struct Operand {
     inline void set(int type, bool w, int v, SReg *seg) {
         this->type = type;
         this->w = w;
-        this->v = v;
-        this->seg = seg;
+        switch (type) {
+            case Ptr:
+                this->seg = seg ? seg : &DS;
+                this->v = uint16_t(v);
+                break;
+            case ModRM + 0:
+                this->seg = seg ? seg : &DS;
+                this->v = uint16_t(BX + SI + v);
+                break;
+            case ModRM + 1:
+                this->seg = seg ? seg : &DS;
+                this->v = uint16_t(BX + DI + v);
+                break;
+            case ModRM + 2:
+                this->seg = seg ? seg : &SS;
+                this->v = uint16_t(BP + SI + v);
+                break;
+            case ModRM + 3:
+                this->seg = seg ? seg : &SS;
+                this->v = uint16_t(BP + DI + v);
+                break;
+            case ModRM + 4:
+                this->seg = seg ? seg : &DS;
+                this->v = uint16_t(SI + v);
+                break;
+            case ModRM + 5:
+                this->seg = seg ? seg : &DS;
+                this->v = uint16_t(DI + v);
+                break;
+            case ModRM + 6:
+                this->seg = seg ? seg : &SS;
+                this->v = uint16_t(BP + v);
+                break;
+            case ModRM + 7:
+                this->seg = seg ? seg : &DS;
+                this->v = uint16_t(BX + v);
+                break;
+            default:
+                this->seg = NULL;
+                this->v = v;
+                break;
+        }
     }
 
     inline size_t modrm(uint8_t *p, bool w, SReg *seg) {
@@ -124,45 +164,14 @@ struct Operand {
         return modrm(p, w, seg);
     }
 
-    inline int addr() {
-        switch (type) {
-            case Ptr: return uint16_t(v);
-            case ModRM + 0: return uint16_t(BX + SI + v);
-            case ModRM + 1: return uint16_t(BX + DI + v);
-            case ModRM + 2: return uint16_t(BP + SI + v);
-            case ModRM + 3: return uint16_t(BP + DI + v);
-            case ModRM + 4: return uint16_t(SI + v);
-            case ModRM + 5: return uint16_t(DI + v);
-            case ModRM + 6: return uint16_t(BP + v);
-            case ModRM + 7: return uint16_t(BX + v);
-        }
-        return -1;
-    }
-
     inline uint8_t * ptr() {
-        int ad = addr();
-        if (ad < 0) return NULL;
-        return &getseg()[ad];
-    }
-
-    inline SReg & getseg() {
-        if (seg) return *seg;
-        switch (type) {
-            case ModRM + 2:
-            case ModRM + 3:
-            case ModRM + 6:
-                return SS;
-        }
-        return DS;
+        return seg ? &(*seg)[v] : NULL;
     }
 
     inline int operator *() {
-        switch (type) {
-            case Reg: return w ? r[v]: *r8[v];
-            case Imm: return v;
-        }
+        if (type == Reg) return w ? r[v] : *r8[v];
         uint8_t *p = ptr();
-        if (!p) return 0;
+        if (!p) return v;
         return w ? read16(p) : *p;
     }
 
@@ -779,7 +788,7 @@ void step(uint8_t rep, SReg *seg) {
             return;
         case 0x8d: // lea reg16, r/m
             ip += opr2.regrm(&opr1, p, 1, seg);
-            opr1 = opr2.addr();
+            opr1 = opr2.v;
             return;
         case 0x8e: // mov sreg, r/m
             ip += opr2.modrm(p, 1, seg);

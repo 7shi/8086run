@@ -190,6 +190,12 @@ struct Operand {
         return modrm(p, w, seg);
     }
 
+    inline size_t aimm(Operand *opr, bool w, uint8_t *p) {
+        set(Reg, w, 0, NULL);
+        opr->set(Imm, w, w ? read16(p) : *p, NULL);
+        return 2 + w;
+    }
+
     inline uint8_t * ptr() const {
         return seg ? &(*seg)[v] : NULL;
     }
@@ -306,16 +312,11 @@ void step(uint8_t rep, SReg *seg) {
             opr1 = opr1.setf(val);
             return;
         case 0x04: // add al, imm8
-            ip += 2;
-            val = int8_t(dst = AL) + int8_t(p[1]);
-            CF = dst > uint8_t(val);
-            AL = setf8(val);
-            return;
         case 0x05: // add ax, imm16
-            ip += 3;
-            val = int16_t(dst = AX) + int16_t(read16(p + 1));
-            CF = dst > uint16_t(val);
-            AX = setf16(val);
+            ip += opr1.aimm(&opr2, b & 1, p + 1);
+            val = *opr1 + *opr2;
+            CF = opr1 > val;
+            opr1 = opr1.setf(val);
             return;
         case 0x06: // push es
             ++ip;
@@ -333,14 +334,10 @@ void step(uint8_t rep, SReg *seg) {
             opr1 = opr1.setf(*opr1 | *opr2);
             return;
         case 0x0c: // or al, imm8
-            ip += 2;
-            CF = false;
-            AL = setf8(int8_t(AL | p[1]));
-            return;
         case 0x0d: // or ax, imm16
-            ip += 3;
+            ip += opr1.aimm(&opr2, b & 1, p + 1);
             CF = false;
-            AX = setf16(int16_t(AX | read16(p + 1)));
+            opr1 = opr1.setf(*opr1 | *opr2);
             return;
         case 0x0e: // push cs
             ++ip;
@@ -357,16 +354,11 @@ void step(uint8_t rep, SReg *seg) {
             opr1 = opr1.setf(val);
             return;
         case 0x14: // adc al, imm8
-            ip += 2;
-            val = int8_t(dst = AL) + (src = int8_t(p[1]) + CF);
-            CF = dst > uint8_t(val) || (CF && !src);
-            AL = setf8(val);
-            return;
         case 0x15: // adc ax, imm16
-            ip += 3;
-            val = int16_t(dst = AX) + (src = int16_t(read16(p + 1)) + CF);
-            CF = dst > uint16_t(val) || (CF && !src);
-            AX = setf16(val);
+            ip += opr1.aimm(&opr2, b & 1, p + 1);
+            val = *opr1 + (src = *opr2 + CF);
+            CF = opr1 > val || (CF && !src);
+            opr1 = opr1.setf(val);
             return;
         case 0x16: // push ss
             ++ip;
@@ -385,16 +377,11 @@ void step(uint8_t rep, SReg *seg) {
             opr1 = opr1.setf(val);
             return;
         case 0x1c: // sbb al, imm8
-            ip += 2;
-            val = int8_t(dst = AL) - (src = int8_t(p[1]) + CF);
-            CF = dst < uint8_t(src) || (CF && !src);
-            AL = setf8(val);
-            return;
         case 0x1d: // sbb ax, imm16
-            ip += 3;
-            val = int16_t(dst = AX) - (src = int16_t(read16(p + 1)) + CF);
-            CF = dst < uint16_t(src) || (CF && !src);
-            AX = setf16(val);
+            ip += opr1.aimm(&opr2, b & 1, p + 1);
+            val = *opr1 - (src = *opr2 + CF);
+            CF = opr1 < src || (CF && !src);
+            opr1 = opr1.setf(val);
             return;
         case 0x1e: // push ds
             ++ip;
@@ -412,14 +399,10 @@ void step(uint8_t rep, SReg *seg) {
             opr1 = opr1.setf(*opr1 & *opr2);
             return;
         case 0x24: // and al, imm8
-            ip += 2;
-            CF = false;
-            AL = setf8(int8_t(AL & p[1]));
-            return;
         case 0x25: // and ax, imm16
-            ip += 3;
+            ip += opr1.aimm(&opr2, b & 1, p + 1);
             CF = false;
-            AX = setf16(int16_t(AX & read16(p + 1)));
+            opr1 = opr1.setf(*opr1 & *opr2);
             return;
         case 0x26: // es:
             ++ip;
@@ -434,16 +417,11 @@ void step(uint8_t rep, SReg *seg) {
             opr1 = opr1.setf(val);
             return;
         case 0x2c: // sub al, imm8
-            ip += 2;
-            val = int8_t(dst = AL) - int8_t(src = p[1]);
-            CF = dst < src;
-            AL = setf8(val);
-            return;
         case 0x2d: // sub ax, imm16
-            ip += 3;
-            val = int16_t(dst = AX) - int16_t(src = read16(p + 1));
-            CF = dst < src;
-            AX = setf16(val);
+            ip += opr1.aimm(&opr2, b & 1, p + 1);
+            val = *opr1 - (src = *opr2);
+            CF = opr1 < src;
+            opr1 = opr1.setf(val);
             return;
         case 0x2e: // cs:
             ++ip;
@@ -457,14 +435,10 @@ void step(uint8_t rep, SReg *seg) {
             opr1 = opr1.setf(*opr1 ^ *opr2);
             return;
         case 0x34: // xor al, imm8
-            ip += 2;
-            CF = false;
-            AL = setf8(int8_t(AL ^ p[1]));
-            return;
         case 0x35: // xor ax, imm16
-            ip += 3;
+            ip += opr1.aimm(&opr2, b & 1, p + 1);
             CF = false;
-            AX = setf16(int16_t(AX ^ read16(p + 1)));
+            opr1 = opr1.setf(*opr1 ^ *opr2);
             return;
         case 0x36: // ss:
             ++ip;
@@ -479,16 +453,11 @@ void step(uint8_t rep, SReg *seg) {
             opr1.setf(val);
             return;
         case 0x3c: // cmp al, imm8
-            ip += 2;
-            val = int8_t(dst = AL) - int8_t(src = p[1]);
-            CF = dst < src;
-            setf8(val);
-            return;
         case 0x3d: // cmp ax, imm16
-            ip += 3;
-            val = int16_t(dst = AX) - int16_t(src = read16(p + 1));
-            CF = dst < src;
-            setf16(val);
+            ip += opr1.aimm(&opr2, b & 1, p + 1);
+            val = *opr1 - (src = *opr2);
+            CF = opr1 < src;
+            opr1.setf(val);
             return;
         case 0x3e: // ds:
             ++ip;
@@ -815,14 +784,10 @@ void step(uint8_t rep, SReg *seg) {
             } while (((rep == 0xf2 && !ZF) || (rep == 0xf3 && ZF)) && CX);
             return;
         case 0xa8: // test al, imm8
-            ip += 2;
-            CF = false;
-            setf8(int8_t(AL & p[1]));
-            return;
         case 0xa9: // test ax, imm16
-            ip += 3;
+            ip += opr1.aimm(&opr2, b & 1, p + 1);
             CF = false;
-            setf16(int16_t(AX & read16(p + 1)));
+            opr1.setf(*opr1 & *opr2);
             return;
         case 0xaa: // stosb
             ++ip;

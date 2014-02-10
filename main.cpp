@@ -839,25 +839,21 @@ void step(uint8_t rep, SReg *seg) {
                     if (opr2.v > 0) {
                         val <<= opr2.v;
                         CF = val & 0x100;
-                        opr1 = setf8(int8_t(val));
-                        OF = CF != (*opr1 < 0);
+                        opr1 = opr1.setf(val);
                     }
                     return;
                 case 5: // shr
                     if (opr2.v > 0) {
-                        bool f = int8_t(val) < 0;
                         val >>= opr2.v - 1;
                         CF = val & 1;
-                        opr1 = setf8(int8_t(val >> 1));
-                        OF = f;
+                        opr1 = opr1.setf(val >> 1);
                     }
                     return;
                 case 7: // sar
                     if (opr2.v > 0) {
                         val = int8_t(val) >> (opr2.v - 1);
                         CF = val & 1;
-                        opr1 = setf8(val >> 1);
-                        OF = false;
+                        opr1 = opr1.setf(val >> 1);
                     }
                     return;
             }
@@ -895,25 +891,21 @@ void step(uint8_t rep, SReg *seg) {
                     if (opr2.v > 0) {
                         val <<= opr2.v;
                         CF = val & 0x10000;
-                        opr1 = setf16(int16_t(val));
-                        OF = CF != (*opr1 < 0);
+                        opr1 = opr1.setf(val);
                     }
                     return;
                 case 5: // shr
                     if (opr2.v > 0) {
-                        bool f = int16_t(val) < 0;
                         val >>= opr2.v - 1;
                         CF = val & 1;
-                        opr1 = setf16(int16_t(val >> 1));
-                        OF = f;
+                        opr1 = opr1.setf(val >> 1);
                     }
                     return;
                 case 7: // sar
                     if (opr2.v > 0) {
                         val = int16_t(val) >> (opr2.v - 1);
                         CF = val & 1;
-                        opr1 = setf16(val >> 1);
-                        OF = false;
+                        opr1 = opr1.setf(val >> 1);
                     }
                     return;
             }
@@ -1080,25 +1072,21 @@ void step(uint8_t rep, SReg *seg) {
                     if (CL > 0) {
                         val <<= CL;
                         CF = val & 0x100;
-                        opr1 = setf8(int8_t(val));
-                        OF = CF != (*opr1 < 0);
+                        opr1 = opr1.setf(val);
                     }
                     return;
                 case 5: // shr
                     if (CL > 0) {
-                        bool f = int8_t(val) < 0;
                         val >>= CL - 1;
                         CF = val & 1;
-                        opr1 = setf8(int8_t(val >> 1));
-                        OF = f;
+                        opr1 = opr1.setf(val >> 1);
                     }
                     return;
                 case 7: // sar
                     if (CL > 0) {
                         val = int8_t(val) >> (CL - 1);
                         CF = val & 1;
-                        opr1 = setf8(val >> 1);
-                        OF = false;
+                        opr1 = opr1.setf(val >> 1);
                     }
                     return;
             }
@@ -1135,25 +1123,21 @@ void step(uint8_t rep, SReg *seg) {
                     if (CL > 0) {
                         val <<= CL;
                         CF = val & 0x10000;
-                        opr1 = setf16(int16_t(val));
-                        OF = CF != (*opr1 < 0);
+                        opr1 = opr1.setf(val);
                     }
                     return;
                 case 5: // shr
                     if (CL > 0) {
-                        bool f = int16_t(val) < 0;
                         val >>= CL - 1;
                         CF = val & 1;
-                        opr1 = setf16(int16_t(val >> 1));
-                        OF = f;
+                        opr1 = opr1.setf(val >> 1);
                     }
                     return;
                 case 7: // sar
                     if (CL > 0) {
                         val = int16_t(val) >> (CL - 1);
                         CF = val & 1;
-                        opr1 = setf16(val >> 1);
-                        OF = false;
+                        opr1 = opr1.setf(val >> 1);
                     }
                     return;
             }

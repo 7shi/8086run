@@ -164,11 +164,11 @@ struct Operand {
         return modrm(p, w, seg);
     }
 
-    inline uint8_t * ptr() {
+    inline uint8_t * ptr() const {
         return seg ? &(*seg)[v] : NULL;
     }
 
-    inline int operator *() {
+    inline int operator *() const {
         if (type == Reg) return w ? r[v] : *r8[v];
         uint8_t *p = ptr();
         if (!p) return v;
@@ -199,6 +199,16 @@ struct Operand {
         if (!p) return operator *();
         *seg = read16(p + 2);
         return read16(p);
+    }
+
+    inline bool operator>(int val) {
+        if (w) return uint16_t(operator *()) > uint16_t(val);
+        return uint8_t(operator *()) > uint8_t(val);
+    }
+
+    inline bool operator<(int val) {
+        if (w) return uint16_t(operator *()) < uint16_t(val);
+        return uint8_t(operator *()) < uint8_t(val);
     }
 };
 
@@ -276,26 +286,26 @@ void step(uint8_t rep, SReg *seg) {
     switch (b) {
         case 0x00: // add r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
-            val = int8_t(dst = *opr1) + int8_t(*opr2);
-            CF = dst > uint8_t(val);
+            val = int8_t(*opr1) + int8_t(*opr2);
+            CF = opr1 > val;
             opr1 = setf8(val);
             return;
         case 0x01: // add r/m, reg16
             ip += opr1.regrm(&opr2, p, 1, seg);
-            val = int16_t(dst = *opr1) + int16_t(*opr2);
-            CF = dst > uint16_t(val);
+            val = int16_t(*opr1) + int16_t(*opr2);
+            CF = opr1 > val;
             opr1 = setf16(val);
             return;
         case 0x02: // add reg8, r/m
             ip += opr2.regrm(&opr1, p, 0, seg);
-            val = int8_t(dst = *opr1) + int8_t(*opr2);
-            CF = dst > uint8_t(val);
+            val = int8_t(*opr1) + int8_t(*opr2);
+            CF = opr1 > val;
             opr1 = setf8(val);
             return;
         case 0x03: // add reg16, r/m
             ip += opr2.regrm(&opr1, p, 1, seg);
-            val = int16_t(dst = *opr1) + int16_t(*opr2);
-            CF = dst > uint16_t(val);
+            val = int16_t(*opr1) + int16_t(*opr2);
+            CF = opr1 > val;
             opr1 = setf16(val);
             return;
         case 0x04: // add al, imm8
@@ -354,26 +364,26 @@ void step(uint8_t rep, SReg *seg) {
             return hypcall_8t(p[1]);
         case 0x10: // adc r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
-            val = int8_t(dst = *opr1) + (src = int8_t(*opr2) + CF);
-            CF = dst > uint8_t(val) || (CF && !src);
+            val = int8_t(*opr1) + (src = int8_t(*opr2) + CF);
+            CF = opr1 > val || (CF && !src);
             opr1 = setf8(val);
             return;
         case 0x11: // adc r/m, reg16
             ip += opr1.regrm(&opr2, p, 1, seg);
-            val = int16_t(dst = *opr1) + (src = int16_t(*opr2) + CF);
-            CF = dst > uint16_t(val) || (CF && !src);
+            val = int16_t(*opr1) + (src = int16_t(*opr2) + CF);
+            CF = opr1 > val || (CF && !src);
             opr1 = setf16(val);
             return;
         case 0x12: // adc reg8, r/m
             ip += opr2.regrm(&opr1, p, 0, seg);
-            val = int8_t(dst = *opr1) + (src = int8_t(*opr2) + CF);
-            CF = dst > uint8_t(val) || (CF && !src);
+            val = int8_t(*opr1) + (src = int8_t(*opr2) + CF);
+            CF = opr1 > val || (CF && !src);
             opr1 = setf8(val);
             return;
         case 0x13: // adc reg16, r/m
             ip += opr2.regrm(&opr1, p, 1, seg);
-            val = int16_t(dst = *opr1) + (src = int16_t(*opr2) + CF);
-            CF = dst > uint16_t(val) || (CF && !src);
+            val = int16_t(*opr1) + (src = int16_t(*opr2) + CF);
+            CF = opr1 > val || (CF && !src);
             opr1 = setf16(val);
             return;
         case 0x14: // adc al, imm8
@@ -397,26 +407,26 @@ void step(uint8_t rep, SReg *seg) {
             return;
         case 0x18: // sbb r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
-            val = int8_t(dst = *opr1) - (src = int8_t(*opr2) + CF);
-            CF = dst < uint8_t(src) || (CF && !src);
+            val = int8_t(*opr1) - (src = int8_t(*opr2) + CF);
+            CF = opr1 < src || (CF && !src);
             opr1 = setf8(val);
             return;
         case 0x19: // sbb r/m, reg16
             ip += opr1.regrm(&opr2, p, 1, seg);
-            val = int16_t(dst = *opr1) - (src = int16_t(*opr2) + CF);
-            CF = dst < uint16_t(src) || (CF && !src);
+            val = int16_t(*opr1) - (src = int16_t(*opr2) + CF);
+            CF = opr1 < src || (CF && !src);
             opr1 = setf16(val);
             return;
         case 0x1a: // sbb reg8, r/m
             ip += opr2.regrm(&opr1, p, 0, seg);
-            val = int8_t(dst = *opr1) - (src = int8_t(*opr2) + CF);
-            CF = dst < uint8_t(src) || (CF && !src);
+            val = int8_t(*opr1) - (src = int8_t(*opr2) + CF);
+            CF = opr1 < src || (CF && !src);
             opr1 = setf8(val);
             return;
         case 0x1b: // sbb reg16, r/m
             ip += opr2.regrm(&opr1, p, 1, seg);
-            val = int16_t(dst = *opr1) - (src = int16_t(*opr2) + CF);
-            CF = dst < uint16_t(src) || (CF && !src);
+            val = int16_t(*opr1) - (src = int16_t(*opr2) + CF);
+            CF = opr1 < src || (CF && !src);
             opr1 = setf16(val);
             return;
         case 0x1c: // sbb al, imm8
@@ -473,26 +483,26 @@ void step(uint8_t rep, SReg *seg) {
             return step(rep, &ES);
         case 0x28: // sub r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
-            val = int8_t(dst = *opr1) - int8_t(src = *opr2);
-            CF = dst < src;
+            val = int8_t(*opr1) - int8_t(src = *opr2);
+            CF = opr1 < src;
             opr1 = setf8(val);
             return;
         case 0x29: // sub r/m, reg16
             ip += opr1.regrm(&opr2, p, 1, seg);
-            val = int16_t(dst = *opr1) - int16_t(src = *opr2);
-            CF = dst < src;
+            val = int16_t(*opr1) - int16_t(src = *opr2);
+            CF = opr1 < src;
             opr1 = setf16(val);
             return;
         case 0x2a: // sub reg8, r/m
             ip += opr2.regrm(&opr1, p, 0, seg);
-            val = int8_t(dst = *opr1) - int8_t(src = *opr2);
-            CF = dst < src;
+            val = int8_t(*opr1) - int8_t(src = *opr2);
+            CF = opr1 < src;
             opr1 = setf8(val);
             return;
         case 0x2b: // sub reg16, r/m
             ip += opr2.regrm(&opr1, p, 1, seg);
-            val = int16_t(dst = *opr1) - int16_t(src = *opr2);
-            CF = dst < src;
+            val = int16_t(*opr1) - int16_t(src = *opr2);
+            CF = opr1 < src;
             opr1 = setf16(val);
             return;
         case 0x2c: // sub al, imm8
@@ -545,26 +555,26 @@ void step(uint8_t rep, SReg *seg) {
             return step(rep, &SS);
         case 0x38: // cmp r/m, reg8
             ip += opr1.regrm(&opr2, p, 0, seg);
-            val = int8_t(dst = *opr1) - int8_t(src = *opr2);
-            CF = dst < src;
+            val = int8_t(*opr1) - int8_t(src = *opr2);
+            CF = opr1 < src;
             setf8(val);
             return;
         case 0x39: // cmp r/m, reg16
             ip += opr1.regrm(&opr2, p, 1, seg);
-            val = int16_t(dst = *opr1) - int16_t(src = *opr2);
-            CF = dst < src;
+            val = int16_t(*opr1) - int16_t(src = *opr2);
+            CF = opr1 < src;
             setf16(val);
             return;
         case 0x3a: // cmp reg8, r/m
             ip += opr2.regrm(&opr1, p, 0, seg);
-            val = int8_t(dst = *opr1) - int8_t(src = *opr2);
-            CF = dst < src;
+            val = int8_t(*opr1) - int8_t(src = *opr2);
+            CF = opr1 < src;
             setf8(val);
             return;
         case 0x3b: // cmp reg16, r/m
             ip += opr2.regrm(&opr1, p, 1, seg);
-            val = int16_t(dst = *opr1) - int16_t(src = *opr2);
-            CF = dst < src;
+            val = int16_t(*opr1) - int16_t(src = *opr2);
+            CF = opr1 < src;
             setf16(val);
             return;
         case 0x3c: // cmp al, imm8
@@ -662,8 +672,8 @@ void step(uint8_t rep, SReg *seg) {
             ip += opr1.modrm(p, 0, seg) + 1;
             switch ((p[1] >> 3) & 7) {
                 case 0: // add
-                    val = int8_t(dst = *opr1) + int8_t(CS[ip - 1]);
-                    CF = dst > uint8_t(val);
+                    val = int8_t(*opr1) + int8_t(CS[ip - 1]);
+                    CF = opr1 > val;
                     opr1 = setf8(val);
                     return;
                 case 1: // or
@@ -671,13 +681,13 @@ void step(uint8_t rep, SReg *seg) {
                     opr1 = setf8(int8_t(*opr1 | CS[ip - 1]));
                     return;
                 case 2: // adc
-                    val = int8_t(dst = *opr1) + (src = int8_t(CS[ip - 1]) + CF);
-                    CF = dst > uint8_t(val) || (CF && !src);
+                    val = int8_t(*opr1) + (src = int8_t(CS[ip - 1]) + CF);
+                    CF = opr1 > val || (CF && !src);
                     opr1 = setf8(val);
                     return;
                 case 3: // sbb
-                    val = int8_t(dst = *opr1) - (src = int8_t(CS[ip - 1]) + CF);
-                    CF = dst < uint8_t(src) || (CF && !src);
+                    val = int8_t(*opr1) - (src = int8_t(CS[ip - 1]) + CF);
+                    CF = opr1 < src || (CF && !src);
                     opr1 = setf8(val);
                     return;
                 case 4: // and
@@ -685,8 +695,8 @@ void step(uint8_t rep, SReg *seg) {
                     opr1 = setf8(int8_t(*opr1 & CS[ip - 1]));
                     return;
                 case 5: // sub
-                    val = int8_t(dst = *opr1) - int8_t(src = CS[ip - 1]);
-                    CF = dst < src;
+                    val = int8_t(*opr1) - int8_t(src = CS[ip - 1]);
+                    CF = opr1 < src;
                     opr1 = setf8(val);
                     return;
                 case 6: // xor
@@ -694,8 +704,8 @@ void step(uint8_t rep, SReg *seg) {
                     opr1 = setf8(int8_t(*opr1 ^ CS[ip - 1]));
                     return;
                 case 7: // cmp
-                    val = int8_t(dst = *opr1) - int8_t(src = CS[ip - 1]);
-                    CF = dst < src;
+                    val = int8_t(*opr1) - int8_t(src = CS[ip - 1]);
+                    CF = opr1 < src;
                     setf8(val);
                     return;
             }
@@ -706,8 +716,8 @@ void step(uint8_t rep, SReg *seg) {
             opr2.v = b == 0x81 ? read16(&CS[ip] - 2) : (int8_t) CS[--ip - 1];
             switch ((p[1] >> 3) & 7) {
                 case 0: // add
-                    val = int16_t(dst = *opr1) + int16_t(opr2.v);
-                    CF = dst > uint16_t(val);
+                    val = int16_t(*opr1) + int16_t(opr2.v);
+                    CF = opr1 > val;
                     opr1 = setf16(val);
                     return;
                 case 1: // or
@@ -715,13 +725,13 @@ void step(uint8_t rep, SReg *seg) {
                     opr1 = setf16(int16_t(*opr1 | opr2.v));
                     return;
                 case 2: // adc
-                    val = int16_t(dst = *opr1) + (src = int16_t(opr2.v) + CF);
-                    CF = dst > uint16_t(val) || (CF && !src);
+                    val = int16_t(*opr1) + (src = int16_t(opr2.v) + CF);
+                    CF = opr1 > val || (CF && !src);
                     opr1 = setf16(val);
                     return;
                 case 3: // sbb
-                    val = int16_t(dst = *opr1) - (src = int16_t(opr2.v) + CF);
-                    CF = dst < uint16_t(src) || (CF && !src);
+                    val = int16_t(*opr1) - (src = int16_t(opr2.v) + CF);
+                    CF = opr1 < src || (CF && !src);
                     opr1 = setf16(val);
                     return;
                 case 4: // and
@@ -729,8 +739,8 @@ void step(uint8_t rep, SReg *seg) {
                     opr1 = setf16(int16_t(*opr1 & opr2.v));
                     return;
                 case 5: // sub
-                    val = int16_t(dst = *opr1) - int16_t(src = opr2.v);
-                    CF = dst < uint16_t(src);
+                    val = int16_t(*opr1) - int16_t(src = opr2.v);
+                    CF = opr1 < src;
                     opr1 = setf16(val);
                     return;
                 case 6: // xor
@@ -738,8 +748,8 @@ void step(uint8_t rep, SReg *seg) {
                     opr1 = setf16(int16_t(*opr1 ^ opr2.v));
                     return;
                 case 7: // cmp
-                    val = int16_t(dst = *opr1) - int16_t(src = opr2.v);
-                    CF = dst < uint16_t(src);
+                    val = int16_t(*opr1) - int16_t(src = opr2.v);
+                    CF = opr1 < src;
                     setf16(val);
                     return;
             }

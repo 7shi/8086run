@@ -298,6 +298,26 @@ inline uint16_t pop() {
 }
 
 extern "C" void intr(int n) {
+    switch (n) {
+        case 0x10: // video
+            if (AH != 0x0e) return;
+            break;
+        case 0x11: // get equipment list
+            AX = 0;
+            return;
+        case 0x12: // get memory size
+            AX = 640;
+            return;
+        case 0x13: // disk
+            switch (AH) {
+                case 0x00: // reset disk system
+                    return;
+                case 0x41: // int 13 extension check
+                    CF = 1;
+                    return;
+            }
+            break;
+    }
     push(getf());
     IF = TF = 0;
     push(*CS);

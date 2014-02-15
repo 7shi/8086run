@@ -298,6 +298,8 @@ inline uint16_t pop() {
 }
 
 extern "C" void intr(int n) {
+    uint8_t *v = &mem[n << 2];
+    uint16_t cs = read16(v + 2), ip = read16(v);
     switch (n) {
         case 0x08: // timer
             break;
@@ -347,9 +349,8 @@ extern "C" void intr(int n) {
     IF = TF = 0;
     push(*CS);
     push(IP);
-    uint8_t *v = &mem[n << 2];
-    CS = read16(v + 2);
-    IP = read16(v);
+    CS = cs;
+    IP = ip;
 }
 
 inline void shift(Operand *opr, int c, uint8_t *p) {

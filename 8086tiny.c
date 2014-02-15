@@ -32,7 +32,7 @@ extern struct SReg {
 #define CS sr[1]
 
 extern unsigned char mem[], *r8[], IF, TF;
-extern unsigned short ip, r[];
+extern unsigned short IP, r[];
 
 #define AX r[0]
 #define BX r[3]
@@ -67,7 +67,7 @@ void init_8t(char *bios, char *fd) {
     }
 
     // Load BIOS image into F000:0100, and set IP to 0100
-    fread(mem + REGS_BASE + (ip = 0x100), 1, st.st_size, f);
+    fread(mem + REGS_BASE + (IP = 0x100), 1, st.st_size, f);
     fclose(f);
 
     // Open floppy disk image
@@ -107,7 +107,7 @@ int compat_8t() {
     }
 
     // Instruction execution loop. Terminates if CS:IP = 0:0
-    return ip || CS.v;
+    return IP || CS.v;
 }
 
 // Emulator-specific 0F xx opcodes
@@ -115,7 +115,7 @@ int compat_8t() {
 void hypcall_8t(int n) {
     switch (n) {
         case 0: // PUTCHAR_AL
-            ip += 2;
+            IP += 2;
 #ifdef _WIN32
             static int skip;
             if (AL == 27) {
@@ -135,13 +135,13 @@ void hypcall_8t(int n) {
             write(1, &AL, 1);
             return;
         case 1: // GET_RTC
-            ip += 2;
+            IP += 2;
             time(&clock_buf);
             memcpy(ES.p + BX, localtime(&clock_buf), sizeof (struct tm));
             return;
         case 2: // READ_DISK
             if (DL == 1) {
-                ip += 2;
+                IP += 2;
                 if (fseek(fdimg, ((SI << 4) | BP) << 9, SEEK_SET) >= 0) {
                     AL = fread(ES.p + BX, 1, AX, fdimg);
                 } else {
@@ -152,7 +152,7 @@ void hypcall_8t(int n) {
             break;
         case 3: // WRITE_DISK
             if (DL == 1) {
-                ip += 2;
+                IP += 2;
                 if (fseek(fdimg, ((SI << 4) | BP) << 9, SEEK_SET) >= 0) {
                     AL = fwrite(ES.p + BX, 1, AX, fdimg);
                 } else {
@@ -162,6 +162,6 @@ void hypcall_8t(int n) {
             }
             break;
     }
-    fprintf(stderr, "%04x:%04x 0f%02x invalid hyper call\n", CS.v, ip, n);
+    fprintf(stderr, "%04x:%04x 0f%02x invalid hyper call\n", CS.v, IP, n);
     exit(1);
 }

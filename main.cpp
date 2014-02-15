@@ -10,7 +10,7 @@ extern "C" int compat_8t();
 extern "C" void hypcall_8t(int);
 
 uint8_t mem[0x110000], io[0x10000];
-uint16_t ip, r[8];
+uint16_t IP, r[8];
 uint8_t *r8[8];
 bool OF, DF, IF, TF, SF, ZF, AF, PF, CF;
 bool ptable[256];
@@ -62,7 +62,7 @@ debug(FILE *f) {
             "%04x %04x %04x %04x-%04x %04x %04x %04x %c%c%c%c%c%c%c%c%c %04x %04x %04x %04x:%04x %02x%02x%02x\n",
             AX, BX, CX, DX, SP, BP, SI, DI,
             "-O"[OF], "-D"[DF], "-I"[IF], "-T"[TF], "-S"[SF], "-Z"[ZF], "-A"[AF], "-P"[PF], "-C"[CF],
-            *ES, *SS, *DS, *CS, ip, CS[ip], CS[ip + 1], CS[ip + 2]);
+            *ES, *SS, *DS, *CS, IP, CS[IP], CS[IP + 1], CS[IP + 2]);
 }
 
 inline uint16_t read16(uint8_t *p) {
@@ -281,9 +281,9 @@ inline void setf(uint16_t flags) {
 
 inline void jumpif(int8_t offset, bool c) {
     if (c) {
-        ip += 2 + offset;
+        IP += 2 + offset;
     } else {
-        ip += 2;
+        IP += 2;
     }
 }
 
@@ -346,10 +346,10 @@ extern "C" void intr(int n) {
     push(getf());
     IF = TF = 0;
     push(*CS);
-    push(ip);
+    push(IP);
     uint8_t *v = &mem[n << 2];
     CS = read16(v + 2);
-    ip = read16(v);
+    IP = read16(v);
 }
 
 inline void shift(Operand *opr, int c, uint8_t *p) {
@@ -413,7 +413,7 @@ inline void shift(Operand *opr, int c, uint8_t *p) {
 
 void step(uint8_t rep, SReg *seg) {
     Operand opr1, opr2;
-    uint8_t *p = &CS[ip], b = *p;
+    uint8_t *p = &CS[IP], b = *p;
     int dst, src, val;
     switch (b) {
         case 0x00: // add r/m, reg8
@@ -422,16 +422,16 @@ void step(uint8_t rep, SReg *seg) {
         case 0x03: // add reg16, r/m
         case 0x04: // add al, imm8
         case 0x05: // add ax, imm16
-            ip += opr1.getopr(&opr2, b, p, seg);
+            IP += opr1.getopr(&opr2, b, p, seg);
             val = *opr1 + *opr2;
             CF = opr1 > val;
             opr1 = opr1.setf(val);
             return;
         case 0x06: // push es
-            ++ip;
+            ++IP;
             return push(*ES);
         case 0x07: // pop es
-            ++ip;
+            ++IP;
             ES = pop();
             return;
         case 0x08: // or r/m, reg8
@@ -440,12 +440,12 @@ void step(uint8_t rep, SReg *seg) {
         case 0x0b: // or reg16, r/m
         case 0x0c: // or al, imm8
         case 0x0d: // or ax, imm16
-            ip += opr1.getopr(&opr2, b, p, seg);
+            IP += opr1.getopr(&opr2, b, p, seg);
             CF = false;
             opr1 = opr1.setf(*opr1 | *opr2);
             return;
         case 0x0e: // push cs
-            ++ip;
+            ++IP;
             return push(*CS);
         case 0x0f: // cable3 hyper call
             return hypcall_8t(p[1]);
@@ -455,16 +455,16 @@ void step(uint8_t rep, SReg *seg) {
         case 0x13: // adc reg16, r/m
         case 0x14: // adc al, imm8
         case 0x15: // adc ax, imm16
-            ip += opr1.getopr(&opr2, b, p, seg);
+            IP += opr1.getopr(&opr2, b, p, seg);
             val = *opr1 + (src = *opr2 + CF);
             CF = opr1 > val || (CF && !src);
             opr1 = opr1.setf(val);
             return;
         case 0x16: // push ss
-            ++ip;
+            ++IP;
             return push(*SS);
         case 0x17: // pop ss
-            ++ip;
+            ++IP;
             SS = pop();
             return;
         case 0x18: // sbb r/m, reg8
@@ -473,16 +473,16 @@ void step(uint8_t rep, SReg *seg) {
         case 0x1b: // sbb reg16, r/m
         case 0x1c: // sbb al, imm8
         case 0x1d: // sbb ax, imm16
-            ip += opr1.getopr(&opr2, b, p, seg);
+            IP += opr1.getopr(&opr2, b, p, seg);
             val = *opr1 - (src = *opr2 + CF);
             CF = opr1 < src || (CF && !src);
             opr1 = opr1.setf(val);
             return;
         case 0x1e: // push ds
-            ++ip;
+            ++IP;
             return push(*DS);
         case 0x1f: // pop ds
-            ++ip;
+            ++IP;
             DS = pop();
             return;
         case 0x20: // and r/m, reg8
@@ -491,12 +491,12 @@ void step(uint8_t rep, SReg *seg) {
         case 0x23: // and reg16, r/m
         case 0x24: // and al, imm8
         case 0x25: // and ax, imm16
-            ip += opr1.getopr(&opr2, b, p, seg);
+            IP += opr1.getopr(&opr2, b, p, seg);
             CF = false;
             opr1 = opr1.setf(*opr1 & *opr2);
             return;
         case 0x26: // es:
-            ++ip;
+            ++IP;
             return step(rep, &ES);
         case 0x28: // sub r/m, reg8
         case 0x29: // sub r/m, reg16
@@ -504,13 +504,13 @@ void step(uint8_t rep, SReg *seg) {
         case 0x2b: // sub reg16, r/m
         case 0x2c: // sub al, imm8
         case 0x2d: // sub ax, imm16
-            ip += opr1.getopr(&opr2, b, p, seg);
+            IP += opr1.getopr(&opr2, b, p, seg);
             val = *opr1 - (src = *opr2);
             CF = opr1 < src;
             opr1 = opr1.setf(val);
             return;
         case 0x2e: // cs:
-            ++ip;
+            ++IP;
             return step(rep, &CS);
         case 0x30: // xor r/m, reg8
         case 0x31: // xor r/m, reg16
@@ -518,12 +518,12 @@ void step(uint8_t rep, SReg *seg) {
         case 0x33: // xor reg16, r/m
         case 0x34: // xor al, imm8
         case 0x35: // xor ax, imm16
-            ip += opr1.getopr(&opr2, b, p, seg);
+            IP += opr1.getopr(&opr2, b, p, seg);
             CF = false;
             opr1 = opr1.setf(*opr1 ^ *opr2);
             return;
         case 0x36: // ss:
-            ++ip;
+            ++IP;
             return step(rep, &SS);
         case 0x38: // cmp r/m, reg8
         case 0x39: // cmp r/m, reg16
@@ -531,13 +531,13 @@ void step(uint8_t rep, SReg *seg) {
         case 0x3b: // cmp reg16, r/m
         case 0x3c: // cmp al, imm8
         case 0x3d: // cmp ax, imm16
-            ip += opr1.getopr(&opr2, b, p, seg);
+            IP += opr1.getopr(&opr2, b, p, seg);
             val = *opr1 - (src = *opr2);
             CF = opr1 < src;
             opr1.setf(val);
             return;
         case 0x3e: // ds:
-            ++ip;
+            ++IP;
             return step(rep, &DS);
         case 0x40: // inc reg16
         case 0x41:
@@ -547,7 +547,7 @@ void step(uint8_t rep, SReg *seg) {
         case 0x45:
         case 0x46:
         case 0x47:
-            ++ip;
+            ++IP;
             r[b & 7] = setf16(int16_t(r[b & 7]) + 1);
             return;
         case 0x48: // dec reg16
@@ -558,7 +558,7 @@ void step(uint8_t rep, SReg *seg) {
         case 0x4d:
         case 0x4e:
         case 0x4f:
-            ++ip;
+            ++IP;
             r[b & 7] = setf16(int16_t(r[b & 7]) - 1);
             return;
         case 0x50: // push reg16
@@ -569,7 +569,7 @@ void step(uint8_t rep, SReg *seg) {
         case 0x55:
         case 0x56:
         case 0x57:
-            ++ip;
+            ++IP;
             push(r[b & 7]);
             return;
         case 0x58: // pop reg16
@@ -580,7 +580,7 @@ void step(uint8_t rep, SReg *seg) {
         case 0x5d:
         case 0x5e:
         case 0x5f:
-            ++ip;
+            ++IP;
             r[b & 7] = pop();
             return;
         case 0x70: // jo
@@ -618,13 +618,13 @@ void step(uint8_t rep, SReg *seg) {
         case 0x80: // r/m, imm8
         case 0x81: // r/m, imm16
         case 0x83: // r/m, imm8 (signed extend to 16bit)
-            ip += opr1.modrm(p, b & 1, seg);
+            IP += opr1.modrm(p, b & 1, seg);
             if (b == 0x83) {
-                opr2.set(Ptr, 0, ip, &CS);
+                opr2.set(Ptr, 0, IP, &CS);
             } else {
-                opr2.set(Ptr, opr1.w, ip, &CS);
+                opr2.set(Ptr, opr1.w, IP, &CS);
             }
-            ip += 1 + opr2.w;
+            IP += 1 + opr2.w;
             switch ((p[1] >> 3) & 7) {
                 case 0: // add
                     val = *opr1 + *opr2;
@@ -667,13 +667,13 @@ void step(uint8_t rep, SReg *seg) {
             break;
         case 0x84: // test r/m, reg8
         case 0x85: // test r/m, reg16
-            ip += opr1.regrm(&opr2, p, RmReg, b & 1, seg);
+            IP += opr1.regrm(&opr2, p, RmReg, b & 1, seg);
             CF = false;
             opr1.setf(*opr1 & *opr2);
             return;
         case 0x86: // xchg r/m, reg8
         case 0x87: // xchg r/m, reg16
-            ip += opr1.regrm(&opr2, p, RmReg, b & 1, seg);
+            IP += opr1.regrm(&opr2, p, RmReg, b & 1, seg);
             val = *opr2;
             opr2 = *opr1;
             opr1 = val;
@@ -682,27 +682,27 @@ void step(uint8_t rep, SReg *seg) {
         case 0x89: // mov r/m, reg16
         case 0x8a: // mov reg8, r/m
         case 0x8b: // mov reg16, r/m
-            ip += opr1.regrm(&opr2, p, b & 2, b & 1, seg);
+            IP += opr1.regrm(&opr2, p, b & 2, b & 1, seg);
             opr1 = *opr2;
             return;
         case 0x8c: // mov r/m, sreg
-            ip += opr1.modrm(p, 1, seg);
+            IP += opr1.modrm(p, 1, seg);
             opr1 = *sr[(p[1] >> 3) & 3];
             return;
         case 0x8d: // lea reg16, r/m
-            ip += opr1.regrm(&opr2, p, RegRm, 1, seg);
+            IP += opr1.regrm(&opr2, p, RegRm, 1, seg);
             opr1 = opr2.v;
             return;
         case 0x8e: // mov sreg, r/m
-            ip += opr2.modrm(p, 1, seg);
+            IP += opr2.modrm(p, 1, seg);
             sr[(p[1] >> 3) & 3] = *opr2;
             return;
         case 0x8f: // pop r/m
-            ip += opr1.modrm(p, 1, seg);
+            IP += opr1.modrm(p, 1, seg);
             opr1 = pop();
             return;
         case 0x90: // nop
-            ++ip;
+            ++IP;
             return;
         case 0x91: // xchg reg, ax
         case 0x92:
@@ -711,57 +711,57 @@ void step(uint8_t rep, SReg *seg) {
         case 0x95:
         case 0x96:
         case 0x97:
-            ++ip;
+            ++IP;
             val = AX;
             AX = r[b & 7];
             r[b & 7] = val;
             return;
         case 0x98: // cbw
-            ++ip;
+            ++IP;
             AX = (int16_t) (int8_t) AL;
             return;
         case 0x99: // cwd
-            ++ip;
+            ++IP;
             DX = int16_t(AX) < 0 ? 0xffff : 0;
             return;
         case 0x9a: // callf
-            ip += 5;
+            IP += 5;
             push(*CS);
-            push(ip);
+            push(IP);
             CS = read16(p + 3);
-            ip = read16(p + 1);
+            IP = read16(p + 1);
             return;
         case 0x9c: // pushf
-            ++ip;
+            ++IP;
             return push(getf());
         case 0x9d: // popf
-            ++ip;
+            ++IP;
             return setf(pop());
         case 0x9e: // sahf
-            ++ip;
+            ++IP;
             return setf((getf() & 0xff00) | AH);
         case 0x9f: // lahf
-            ++ip;
+            ++IP;
             AH = getf();
             return;
         case 0xa0: // mov al, [addr]
-            ip += 3;
+            IP += 3;
             AL = *ptr(read16(p + 1), 0, seg);
             return;
         case 0xa1: // mov ax, [addr]
-            ip += 3;
+            IP += 3;
             AX = *ptr(read16(p + 1), 1, seg);
             return;
         case 0xa2: // mov [addr], al
-            ip += 3;
+            IP += 3;
             ptr(read16(p + 1), 0, seg) = AL;
             return;
         case 0xa3: // mov [addr], ax
-            ip += 3;
+            IP += 3;
             ptr(read16(p + 1), 1, seg) = AX;
             return;
         case 0xa4: // movsb
-            ++ip;
+            ++IP;
             if (!seg) seg = &DS;
             do {
                 ES[DI] = (*seg)[SI];
@@ -776,7 +776,7 @@ void step(uint8_t rep, SReg *seg) {
             } while ((rep == 0xf2 || rep == 0xf3) && CX);
             return;
         case 0xa5: // movsw
-            ++ip;
+            ++IP;
             if (!seg) seg = &DS;
             do {
                 write16(&ES[DI], read16(&(*seg)[SI]));
@@ -791,7 +791,7 @@ void step(uint8_t rep, SReg *seg) {
             } while ((rep == 0xf2 || rep == 0xf3) && CX);
             return;
         case 0xa6: // cmpsb
-            ++ip;
+            ++IP;
             if (!seg) seg = &DS;
             do {
                 val = int8_t(dst = (*seg)[SI]) - int8_t(src = ES[DI]);
@@ -808,7 +808,7 @@ void step(uint8_t rep, SReg *seg) {
             } while (((rep == 0xf2 && !ZF) || (rep == 0xf3 && ZF)) && CX);
             return;
         case 0xa7: // cmpsw
-            ++ip;
+            ++IP;
             if (!seg) seg = &DS;
             do {
                 val = int16_t(dst = read16(&(*seg)[SI])) - int16_t(src = read16(&ES[DI]));
@@ -826,12 +826,12 @@ void step(uint8_t rep, SReg *seg) {
             return;
         case 0xa8: // test al, imm8
         case 0xa9: // test ax, imm16
-            ip += opr1.aimm(&opr2, b & 1, p + 1);
+            IP += opr1.aimm(&opr2, b & 1, p + 1);
             CF = false;
             opr1.setf(*opr1 & *opr2);
             return;
         case 0xaa: // stosb
-            ++ip;
+            ++IP;
             do {
                 ES[DI] = AL;
                 if (DF) DI--;
@@ -840,7 +840,7 @@ void step(uint8_t rep, SReg *seg) {
             } while ((rep == 0xf2 || rep == 0xf3) && CX);
             return;
         case 0xab: // stosw
-            ++ip;
+            ++IP;
             do {
                 write16(&ES[DI], AX);
                 if (DF) DI -= 2;
@@ -849,7 +849,7 @@ void step(uint8_t rep, SReg *seg) {
             } while ((rep == 0xf2 || rep == 0xf3) && CX);
             return;
         case 0xac: // lodsb
-            ++ip;
+            ++IP;
             if (!seg) seg = &DS;
             do {
                 AL = (*seg)[SI];
@@ -859,7 +859,7 @@ void step(uint8_t rep, SReg *seg) {
             } while ((rep == 0xf2 || rep == 0xf3) && CX);
             return;
         case 0xad: // lodsw
-            ++ip;
+            ++IP;
             if (!seg) seg = &DS;
             do {
                 AX = read16(&(*seg)[SI]);
@@ -869,7 +869,7 @@ void step(uint8_t rep, SReg *seg) {
             } while ((rep == 0xf2 || rep == 0xf3) && CX);
             return;
         case 0xae: // scasb
-            ++ip;
+            ++IP;
             do {
                 val = int8_t(AL) - int8_t(src = ES[DI]);
                 CF = AL < src;
@@ -880,7 +880,7 @@ void step(uint8_t rep, SReg *seg) {
             } while (((rep == 0xf2 && !ZF) || (rep == 0xf3 && ZF)) && CX);
             return;
         case 0xaf: // scasw
-            ++ip;
+            ++IP;
             do {
                 val = int16_t(AX) - int16_t(src = read16(&ES[DI]));
                 CF = AX < src;
@@ -898,7 +898,7 @@ void step(uint8_t rep, SReg *seg) {
         case 0xb5:
         case 0xb6:
         case 0xb7:
-            ip += 2;
+            IP += 2;
             *r8[b & 7] = p[1];
             return;
         case 0xb8: // mov reg16, imm16
@@ -909,70 +909,70 @@ void step(uint8_t rep, SReg *seg) {
         case 0xbd:
         case 0xbe:
         case 0xbf:
-            ip += 3;
+            IP += 3;
             r[b & 7] = read16(p + 1);
             return;
         case 0xc0: // byte r/m, imm8 (80186)
         case 0xc1: // r/m, imm8 (80186)
-            ip += opr1.modrm(p, b & 1, seg) + 1;
-            return shift(&opr1, CS[ip - 1], p);
+            IP += opr1.modrm(p, b & 1, seg) + 1;
+            return shift(&opr1, CS[IP - 1], p);
         case 0xc2: // ret imm16
-            ip = pop();
+            IP = pop();
             SP += read16(p + 1);
             return;
         case 0xc3: // ret
-            ip = pop();
+            IP = pop();
             return;
         case 0xc4: // les reg16, r/m
-            ip += opr1.regrm(&opr2, p, RegRm, 1, seg);
+            IP += opr1.regrm(&opr2, p, RegRm, 1, seg);
             opr1 = opr2.loadf(&ES);
             return;
         case 0xc5: // lds reg16, r/m
-            ip += opr1.regrm(&opr2, p, RegRm, 1, seg);
+            IP += opr1.regrm(&opr2, p, RegRm, 1, seg);
             opr1 = opr2.loadf(&DS);
             return;
         case 0xc6: // mov r/m, imm8
-            ip += opr1.modrm(p, 0, seg) + 1;
-            opr1 = CS[ip - 1];
+            IP += opr1.modrm(p, 0, seg) + 1;
+            opr1 = CS[IP - 1];
             return;
         case 0xc7: // mov r/m, imm16
-            ip += opr1.modrm(p, 1, seg) + 2;
-            opr1 = read16(&CS[ip] - 2);
+            IP += opr1.modrm(p, 1, seg) + 2;
+            opr1 = read16(&CS[IP] - 2);
             return;
         case 0xca: // retf imm16
-            ip = pop();
+            IP = pop();
             CS = pop();
             SP += read16(p + 1);
             return;
         case 0xcb: // retf
-            ip = pop();
+            IP = pop();
             CS = pop();
             return;
         case 0xcc: // int3
-            ++ip;
+            ++IP;
             return intr(3);
         case 0xcd: // int imm8
-            ip += 2;
+            IP += 2;
             return intr(p[1]);
         case 0xce: // into
-            ++ip;
+            ++IP;
             if (OF) intr(4);
             return;
         case 0xcf: // iret
-            ip = pop();
+            IP = pop();
             CS = pop();
             setf(pop());
             return;
         case 0xd0: // byte r/m, 1
         case 0xd1: // r/m, 1
-            ip += opr1.modrm(p, b & 1, seg);
+            IP += opr1.modrm(p, b & 1, seg);
             return shift(&opr1, 1, p);
         case 0xd2: // byte r/m, cl
         case 0xd3: // r/m, cl
-            ip += opr1.modrm(p, b & 1, seg);
+            IP += opr1.modrm(p, b & 1, seg);
             return shift(&opr1, CL, p);
         case 0xd7: // xlat
-            ++ip;
+            ++IP;
             AL = (seg ? *seg : DS)[BX + AL];
             return;
         case 0xd8: // esc (8087 FPU)
@@ -983,7 +983,7 @@ void step(uint8_t rep, SReg *seg) {
         case 0xdd:
         case 0xde:
         case 0xdf:
-            ip += 2;
+            IP += 2;
             return;
         case 0xe0: // loopnz/loopne
             return jumpif(p[1], --CX > 0 && !ZF);
@@ -994,69 +994,69 @@ void step(uint8_t rep, SReg *seg) {
         case 0xe3: // jcxz
             return jumpif(p[1], CX == 0);
         case 0xe4: // in al, imm8
-            ip += 2;
+            IP += 2;
             AL = io[p[1]];
             return;
         case 0xe5: // in ax, imm8
-            ip += 2;
+            IP += 2;
             AX = read16(io + p[1]);
             return;
         case 0xe6: // out imm8, al
-            ip += 2;
+            IP += 2;
             io[p[1]] = AL;
             return;
         case 0xe7: // out imm8, ax
-            ip += 2;
+            IP += 2;
             write16(io + p[1], AX);
             return;
         case 0xe8: // call disp
-            push(ip + 3);
-            ip += 3 + read16(p + 1);
+            push(IP + 3);
+            IP += 3 + read16(p + 1);
             return;
         case 0xe9: // jmp disp
-            ip += 3 + read16(p + 1);
+            IP += 3 + read16(p + 1);
             return;
         case 0xea: // jmpf
             CS = read16(p + 3);
-            ip = read16(p + 1);
+            IP = read16(p + 1);
             return;
         case 0xeb: // jmp short
-            ip += 2 + (int8_t) p[1];
+            IP += 2 + (int8_t) p[1];
             return;
         case 0xec: // in al, dx
-            ++ip;
+            ++IP;
             AL = io[DX];
             return;
         case 0xed: // in ax, dx
-            ++ip;
+            ++IP;
             AX = read16(io + DX);
             return;
         case 0xee: // out dx, al
-            ++ip;
+            ++IP;
             io[DX] = AL;
             return;
         case 0xef: // out dx, ax
-            ++ip;
+            ++IP;
             write16(io + DX, AX);
             return;
         case 0xf2: // repnz/repne
         case 0xf3: // rep/repz/repe
-            ++ip;
+            ++IP;
             if (CX) step(b, seg);
             return;
         case 0xf4: // hlt
-            ++ip;
+            ++IP;
             return;
         case 0xf5: // cmc
-            ++ip;
+            ++IP;
             CF = !CF;
             return;
         case 0xf6:
-            ip += opr1.modrm(p, 0, seg);
+            IP += opr1.modrm(p, 0, seg);
             switch ((p[1] >> 3) & 7) {
                 case 0: // test r/m, imm8
                     CF = false;
-                    setf8(*opr1 & int8_t(CS[ip++]));
+                    setf8(*opr1 & int8_t(CS[IP++]));
                     return;
                 case 2: // not byte r/m
                     opr1 = ~*opr1;
@@ -1091,11 +1091,11 @@ void step(uint8_t rep, SReg *seg) {
             }
             break;
         case 0xf7:
-            ip += opr1.modrm(p, 1, seg);
+            IP += opr1.modrm(p, 1, seg);
             switch ((p[1] >> 3) & 7) {
                 case 0: // test r/m, imm16
                     CF = false;
-                    setf16(*opr1 & int16_t(read16(&CS[ip += 2] - 2)));
+                    setf16(*opr1 & int16_t(read16(&CS[IP += 2] - 2)));
                     return;
                 case 2: // not r/m
                     opr1 = ~*opr1;
@@ -1138,31 +1138,31 @@ void step(uint8_t rep, SReg *seg) {
             }
             break;
         case 0xf8: // clc
-            ++ip;
+            ++IP;
             CF = false;
             return;
         case 0xf9: // stc
-            ++ip;
+            ++IP;
             CF = true;
             return;
         case 0xfa: // cli
-            ++ip;
+            ++IP;
             IF = false;
             return;
         case 0xfb: // sti
-            ++ip;
+            ++IP;
             IF = true;
             return;
         case 0xfc: // cld
-            ++ip;
+            ++IP;
             DF = false;
             return;
         case 0xfd: // std
-            ++ip;
+            ++IP;
             DF = true;
             return;
         case 0xfe: // byte r/m
-            ip += opr1.modrm(p, 0, seg);
+            IP += opr1.modrm(p, 0, seg);
             switch ((p[1] >> 3) & 7) {
                 case 0: // inc
                     opr1 = setf8(*opr1 + 1);
@@ -1173,7 +1173,7 @@ void step(uint8_t rep, SReg *seg) {
             }
             break;
         case 0xff: // r/m
-            ip += opr1.modrm(p, 1, seg);
+            IP += opr1.modrm(p, 1, seg);
             switch ((p[1] >> 3) & 7) {
                 case 0: // inc
                     opr1 = setf16(*opr1 + 1);
@@ -1182,19 +1182,19 @@ void step(uint8_t rep, SReg *seg) {
                     opr1 = setf16(*opr1 - 1);
                     return;
                 case 2: // call
-                    push(ip);
-                    ip = *opr1;
+                    push(IP);
+                    IP = *opr1;
                     return;
                 case 3: // callf
                     push(*CS);
-                    push(ip);
-                    ip = opr1.loadf(&CS);
+                    push(IP);
+                    IP = opr1.loadf(&CS);
                     return;
                 case 4: // jmp
-                    ip = *opr1;
+                    IP = *opr1;
                     return;
                 case 5: // jmpf
-                    ip = opr1.loadf(&CS);
+                    IP = opr1.loadf(&CS);
                     return;
                 case 6: // push
                     push(*opr1);

@@ -300,50 +300,52 @@ inline uint16_t pop() {
 extern "C" void intr(int n) {
     uint8_t *v = &mem[n << 2];
     uint16_t cs = read16(v + 2), ip = read16(v);
-    switch (n) {
-        case 0x08: // timer
-            break;
-        case 0x10: // video
-            if (AH != 0x0e) return;
-            break;
-        case 0x11: // get equipment list
-            AX = 0;
-            return;
-        case 0x12: // get memory size
-            AX = 640;
-            return;
-        case 0x13: // disk
-            switch (AH) {
-                case 0x00: // reset disk system
-                    return;
-                case 0x02: // read sectors
-                case 0x03: // write sectors
-                case 0x08: // get drive params
-                case 0x15: // get disk type
-                    break;
-                case 0x41: // int 13 extension check
-                    CF = 1;
-                    return;
-            }
-            break;
-        case 0x16: // keyboard
-            switch (AH) {
-                case 0x00: // get keystroke
-                case 0x01: // check for keystroke
-                    break;
-            }
-            break;
-        case 0x1a: // time
-            switch (AH) {
-                case 0x00: // get system time
-                case 0x01: // set system time
-                case 0x02: // get RTC time
-                case 0x03: // set RTC time
-                case 0x04: // get RTC date
-                case 0x05: // set RTC date
-                    break;
-            }
-            break;
+    if (cs == 0xf000) {
+        switch (n) {
+            case 0x08: // timer
+                break;
+            case 0x10: // video
+                if (AH != 0x0e) return;
+                break;
+            case 0x11: // get equipment list
+                AX = 0;
+                return;
+            case 0x12: // get memory size
+                AX = 640;
+                return;
+            case 0x13: // disk
+                switch (AH) {
+                    case 0x00: // reset disk system
+                        return;
+                    case 0x02: // read sectors
+                    case 0x03: // write sectors
+                    case 0x08: // get drive params
+                    case 0x15: // get disk type
+                        break;
+                    case 0x41: // int 13 extension check
+                        CF = 1;
+                        return;
+                }
+                break;
+            case 0x16: // keyboard
+                switch (AH) {
+                    case 0x00: // get keystroke
+                    case 0x01: // check for keystroke
+                        break;
+                }
+                break;
+            case 0x1a: // time
+                switch (AH) {
+                    case 0x00: // get system time
+                    case 0x01: // set system time
+                    case 0x02: // get RTC time
+                    case 0x03: // set RTC time
+                    case 0x04: // get RTC date
+                    case 0x05: // set RTC date
+                        break;
+                }
+                break;
+        }
     }
     push(getf());
     IF = TF = 0;

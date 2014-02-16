@@ -304,9 +304,11 @@ extern "C" void intr(int n) {
     if (cs == 0xf000) {
         switch (n) {
             case 0x08: // timer
+                // TODO
                 break;
             case 0x10: // video
                 if (AH != 0x0e) return;
+                // TODO
                 break;
             case 0x11: // get equipment list
                 AX = 0;
@@ -364,6 +366,7 @@ extern "C" void intr(int n) {
                 CF = 1;
                 return;
             case 0x16: // keyboard
+                // TODO
                 switch (AH) {
                     case 0x00: // get keystroke
                     case 0x01: // check for keystroke
@@ -371,6 +374,7 @@ extern "C" void intr(int n) {
                 }
                 break;
             case 0x1a: // time
+                // TODO
                 switch (AH) {
                     case 0x00: // get system time
                     case 0x01: // set system time

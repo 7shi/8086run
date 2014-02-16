@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 extern "C" void init_8t(const char *, const char *);
 extern "C" int compat_8t();
@@ -307,8 +309,10 @@ extern "C" void intr(int n) {
                 // TODO
                 break;
             case 0x10: // video
-                if (AH != 0x0e) return;
-                // TODO
+                if (AH == 0x0e) {
+                    write(1, &AL, 1);
+                    return;
+                }
                 break;
             case 0x11: // get equipment list
                 AX = 0;

@@ -25,16 +25,6 @@
 	db	0x01
 %endmacro
 
-%macro	extended_read_disk 0
-	db	0x0f
-	db	0x02
-%endmacro
-
-%macro	extended_write_disk 0
-	db	0x0f
-	db	0x03
-%endmacro
-
 org	100h				; BIOS loads at offset 0x0100
 
 main:
@@ -63,89 +53,6 @@ bios_entry:
 
 	mov	byte [cs:boot_state], 1	; Set flag so next boot will be warm boot
 
-	; First, set up the disk subsystem. Only do this on the very first startup, when
-	; the emulator sets up the CX/AX registers with disk information.
-
-	; Compute the cylinder/head/sector count for the HD disk image, if present.
-	; Total number of sectors is in CX:AX, or 0 if there is no HD image. First,
-	; we put it in DX:CX.
-
-	mov	dx, cx
-	mov	cx, ax
-
-	mov	[cs:hd_secs_hi], dx
-	mov	[cs:hd_secs_lo], cx
-
-	cmp	cx, 0
-	je	maybe_no_hd
-
-	mov	word [cs:num_disks], 2
-	jmp	calc_hd
-
-maybe_no_hd:
-
-	cmp	dx, 0
-	je	no_hd
-
-	mov	word [cs:num_disks], 2
-	jmp	calc_hd
-
-no_hd:
-
-	mov	word [cs:num_disks], 1
-
-calc_hd:
-
-	mov	ax, cx
-	mov	word [cs:hd_max_track], 1
-	mov	word [cs:hd_max_head], 1
-
-	cmp	dx, 0		; More than 63 total sectors? If so, we have more than 1 track.
-	ja	sect_overflow
-	cmp	ax, 63
-	ja	sect_overflow
-
-	mov	[cs:hd_max_sector], ax
-	jmp	calc_heads
-
-sect_overflow:
-
-	mov	cx, 63		; Calculate number of tracks
-	div	cx
-	mov	[cs:hd_max_track], ax
-	mov	word [cs:hd_max_sector], 63
-
-calc_heads:
-
-	mov	dx, 0		; More than 1024 tracks? If so, we have more than 1 head.
-	mov	ax, [cs:hd_max_track]
-	cmp	ax, 1024
-	ja	track_overflow
-	
-	jmp	calc_end
-
-track_overflow:
-
-	mov	cx, 1024
-	div	cx
-	mov	[cs:hd_max_head], ax
-	mov	word [cs:hd_max_track], 1024
-
-calc_end:
-
-	; Convert number of tracks into maximum track (0-based) and then store in INT 41
-	; HD parameter table
-
-	mov	ax, [cs:hd_max_head]
-	mov	[cs:int41_max_heads], al
-	mov	ax, [cs:hd_max_track]
-	mov	[cs:int41_max_cyls], ax
-	mov	ax, [cs:hd_max_sector]
-	mov	[cs:int41_max_sect], al
-
-	dec	word [cs:hd_max_track]
-	dec	word [cs:hd_max_head]
-	
 ; Main BIOS entry point. Zero the flags, and set up registers.
 
 boot:	mov	ax, 0
@@ -174,13 +81,6 @@ boot:	mov	ax, 0
 	mov	si, int_table
 	mov	cx, [itbl_size]
 	rep	movsb
-
-; Set pointer to INT 41 table for hard disk
-
-	mov	cx, int41
-	mov	word [es:4*0x41], cx
-	mov	cx, 0xf000
-	mov	word [es:4*0x41 + 2], cx
 
 ; Set up last 16 bytes of memory, including boot jump, BIOS date, machine ID byte
 
@@ -1368,339 +1268,6 @@ int10_scroll_down_vmem_update:
 
 	iret
 
-; ************************* INT 11h - get equipment list
-
-int11:	
-	mov	ax, [cs:equip]
-	iret
-
-; ************************* INT 12h - return memory size
-
-int12:	
-	mov	ax, 0x280 ; 640K conventional memory
-	iret
-
-; ************************* INT 13h handler - disk services
-
-int13:
-	cmp	ah, 0x00 ; Reset disk
-	je	int13_reset_disk
-	cmp	ah, 0x01 ; Get last status
-	je	int13_last_status
-
-	cmp	dl, 0x80 ; Hard disk being queried?
-	jne	i13_diskok
-
-	; Now, need to check an HD is installed
-	cmp	word [cs:num_disks], 2
-	jge	i13_diskok
-
-	; No HD, so return an error
-	mov	ah, 15 ; Report no such drive
-	jmp	reach_stack_stc
-
-  i13_diskok:
-
-	cmp	ah, 0x02 ; Read disk
-	je	int13_read_disk
-	cmp	ah, 0x03 ; Write disk
-	je	int13_write_disk
-	cmp	ah, 0x04 ; Verify disk
-	je	int13_verify
-	cmp	ah, 0x05 ; Format track - does nothing here
-	je	int13_format
-	cmp	ah, 0x08 ; Get drive parameters (hard disk)
-	je	int13_getparams
-	cmp	ah, 0x10 ; Check if drive ready (hard disk)
-	je	int13_hdready
-	cmp	ah, 0x15 ; Get disk type
-	je	int13_getdisktype
-	cmp	ah, 0x16 ; Detect disk change
-	je	int13_diskchange
-
-	mov	ah, 1 ; Invalid function
-	jmp	reach_stack_stc
-
-	iret
-
-  int13_reset_disk:
-
-	jmp	reach_stack_clc
-
-  int13_last_status:
-
-	mov	ah, [cs:disk_laststatus]
-	je	ls_no_error
-
-	stc
-	iret
-
-    ls_no_error:
-
-	clc
-	iret
-
-  int13_read_disk:
-
-	push	dx
-
-	cmp	dl, 0 ; Floppy 0
-	je	i_flop_rd
-	cmp	dl, 0x80 ; HD
-	je	i_hd_rd
-
-	pop	dx
-	mov	ah, 1
-	jmp	reach_stack_stc
-
-    i_flop_rd:
-
-	mov	dl, 1		; Floppy disk file handle is stored at j[1] in emulator
-	jmp	i_rd
-
-    i_hd_rd:
-
-	mov	dl, 0		; Hard disk file handle is stored at j[0] in emulator
-
-    i_rd: 
-
-	push	si
-	push	bp
-
-	; Convert head/cylinder/sector number to byte offset in disk image
-
-	call	chs_to_abs
-
-	; Now, SI:BP contains the absolute sector offset of the block. We then multiply by 512 to get the offset into the disk image
-
-	mov	ah, 0
-	cpu	186
-	shl	ax, 9
-	extended_read_disk
-	shr	ax, 9
-	cpu	8086
-	mov	ah, 0x02	; Put read code back
-
-	cmp	al, 0
-	je	rd_error
-
-	; Read was successful. Now, check if we have read the boot sector. If so, we want to update
-	; our internal table of sectors/track to match the disk format
-
-	cmp	dx, 1		; FDD?
-	jne	rd_noerror
-	cmp	cx, 1		; First sector?
-	jne	rd_noerror
-
-	push	ax
-	mov	al, [es:bx+24]	; Number of SPT in floppy disk BPB
-	cmp	al, 0		; If disk is unformatted, do not update the table
-	jne	rd_update_spt
-	pop	ax
-
-	jmp	rd_noerror
-
-    rd_update_spt:
-
-	mov	[cs:int1e_spt], al
-	pop	ax
-
-    rd_noerror:
-
-	clc
-	mov	ah, 0 ; No error
-	jmp	rd_finish
-
-    rd_error:
-
-	stc
-	mov	ah, 4 ; Sector not found
-
-    rd_finish:
-
-	pop	bp
-	pop	si
-	pop	dx
-
-	mov	[cs:disk_laststatus], ah
-	jmp	reach_stack_carry
-
-  int13_write_disk:
-
-	push	dx
-
-	cmp	dl, 0 ; Floppy 0
-	je	i_flop_wr
-	cmp	dl, 0x80 ; HD
-	je	i_hd_wr
-
-	pop	dx
-	mov	ah, 1
-	jmp	reach_stack_stc
-
-    i_flop_wr:
-
-	mov	dl, 1		; Floppy disk file handle is stored at j[1] in emulator
-	jmp	i_wr
-
-    i_hd_wr:
-
-	mov	dl, 0		; Hard disk file handle is stored at j[0] in emulator
-
-    i_wr:
-
-	push	si
-	push	bp
-	push	cx
-	push	di
-
-	; Convert head/cylinder/sector number to byte offset in disk image
-
-	call	chs_to_abs
-
-	; Signal an error if we are trying to write beyond the end of the disk
-	
-	cmp	dl, 0 ; Hard disk?
-	jne	wr_fine ; No - no need for disk sector valid check - NOTE: original submission was JNAE which caused write problems on floppy disk
-
-	; First, we add the number of sectors we are trying to write from the absolute
-	; sector number returned by chs_to_abs. We need to have at least this many
-	; sectors on the disk, otherwise return a sector not found error.
-
-	mov	cx, bp
-	mov	di, si
-
-	mov	ah, 0
-	add	cx, ax
-	adc	di, 0
-
-	cmp	di, [cs:hd_secs_hi]
-	ja	wr_error
-	jb	wr_fine
-	cmp	cx, [cs:hd_secs_lo]
-	ja	wr_error
-
-wr_fine:
-
-	mov	ah, 0
-	cpu	186
-	shl	ax, 9
-	extended_write_disk
-	shr	ax, 9
-	cpu	8086
-	mov	ah, 0x03	; Put write code back
-
-	cmp	al, 0
-	je	wr_error
-
-	clc
-	mov	ah, 0 ; No error
-	jmp	wr_finish
-
-    wr_error:
-
-	stc
-	mov	ah, 4 ; Sector not found
-
-    wr_finish:
-
-	pop	di
-	pop	cx
-	pop	bp
-	pop	si
-	pop	dx
-
-	mov	[cs:disk_laststatus], ah
-	jmp	reach_stack_carry
-
-  int13_verify:
-
-	mov	ah, 0
-	jmp	reach_stack_clc
-
-  int13_getparams:
-
-	cmp 	dl, 0
-	je	i_gp_fl
-	cmp	dl, 0x80
-	je	i_gp_hd
-
-	mov	ah, 0x01
-	mov	[cs:disk_laststatus], ah
-	jmp	reach_stack_stc
-
-    i_gp_fl:
-
-	mov	ax, 0
-	mov	bx, 4
-	mov	cx, 0x4f12
-	mov	dx, 0x0101
-
-	mov	byte [cs:disk_laststatus], 0
-	jmp	reach_stack_clc
-
-    i_gp_hd:
-
-	mov	ax, 0
-	mov	bx, 0
-	mov	dl, 1
-	mov	dh, [cs:hd_max_head]
-	mov	cx, [cs:hd_max_track]
-	ror	ch, 1
-	ror	ch, 1
-	add	ch, [cs:hd_max_sector]
-	xchg	ch, cl
-
-	mov	byte [cs:disk_laststatus], 0
-	jmp	reach_stack_clc
-
-  int13_hdready:
-
-	cmp	byte [cs:num_disks], 2	; HD present?
-	jne	int13_hdready_nohd
-	cmp	dl, 0x80		; Checking first HD?
-	jne	int13_hdready_nohd
-
-	mov	ah, 0
-	jmp	reach_stack_clc
-
-    int13_hdready_nohd:
-
-	jmp	reach_stack_stc
-
-  int13_format:
-
-	mov	ah, 0
-	jmp	reach_stack_clc
-
-  int13_getdisktype:
-
-	cmp	dl, 0 ; Floppy
-	je	gdt_flop
-	cmp	dl, 0x80 ; HD
-	je	gdt_hd
-
-	mov	ah, 15 ; Report no such drive
-	mov	[cs:disk_laststatus], ah
-	jmp	reach_stack_stc
-
-    gdt_flop:
-
-	mov	ah, 1
-	jmp	reach_stack_clc
-
-    gdt_hd:
-
-	mov	ah, 3
-	mov	cx, [cs:hd_secs_hi]
-	mov	dx, [cs:hd_secs_lo]
-	jmp	reach_stack_clc
-
-  int13_diskchange:
-
-	mov	ah, 0 ; Disk not changed
-	jmp	reach_stack_clc
-
 ; ************************* INT 16h handler - keyboard
 
 int16:
@@ -1967,23 +1534,6 @@ int1a:
 
 int1e_spt	db 0xff	; 18 sectors per track (1.44MB)
 
-; ************************* INT 41h - hard disk parameter table
-
-int41:
-
-int41_max_cyls	dw 0
-int41_max_heads	db 0
-		dw 0
-		dw 0
-		db 0
-		db 11000000b
-		db 0
-		db 0
-		db 0
-		dw 0
-int41_max_sect	db 0
-		db 0
-
 ; ************************* ROM configuration table
 
 rom_config	dw 16		; 16 bytes following
@@ -1999,16 +1549,6 @@ rom_config	dw 16		; 16 bytes following
 
 ; Internal state variables
 
-num_disks	dw 0	; Number of disks present
-hd_secs_hi	dw 0	; Total sectors on HD (high word)
-hd_secs_lo	dw 0	; Total sectors on HD (low word)
-hd_max_sector	dw 0	; Max sector number on HD
-hd_max_track	dw 0	; Max track number on HD
-hd_max_head	dw 0	; Max head number on HD
-drive_tracks_temp dw 0
-drive_sectors_temp dw 0
-drive_heads_temp  dw 0
-drive_num_temp    dw 0
 boot_state	db 0
 cga_refresh_reg	db 0
 
@@ -2028,6 +1568,9 @@ intc:
 intd:
 inte:
 intf:
+int11:
+int12:
+int13:
 int14:
 int15:
 int17:
@@ -2138,92 +1681,6 @@ kb_adjust_buf:
 
   kb_adjust_done:
 
-	pop	bx
-	pop	ax
-	ret
-
-; Convert CHS disk position (in CH, CL and DH) to absolute sector number in BP:SI
-; Floppy disks have 512 bytes per sector, 9/18 sectors per track, 2 heads. DH is head number (1 or 0), CH bits 5..0 is
-; sector number, CL7..6 + CH7..0 is 10-bit cylinder/track number. Hard disks have 512 bytes per sector, but a variable
-; number of tracks and heads.
-
-chs_to_abs:
-
-	push	ax	
-	push	bx
-	push	cx
-	push	dx
-
-	mov	[cs:drive_num_temp], dl
-
-	; First, we extract the track number from CH and CL.
-
-	push	cx
-	mov	bh, cl
-	mov	cl, 6
-	shr	bh, cl
-	mov	bl, ch
-
-	; Multiply track number (now in BX) by the number of heads
-
-	cmp	byte [cs:drive_num_temp], 1 ; Floppy disk?
-
-	push	dx
-
-	mov	dx, 0
-	xchg	ax, bx
-
-	jne	chs_hd
-
-	shl	ax, 1 ; Multiply by 2 (number of heads on FD)
-	push	ax
-	xor	ax, ax
-	mov	al, [cs:int1e_spt]
-	mov	[cs:drive_sectors_temp], ax ; Retrieve sectors per track from INT 1E table
-	pop	ax
-
-	jmp	chs_continue
-
-chs_hd:
-
-	mov	bp, [cs:hd_max_head]
-	inc	bp
-	mov	[cs:drive_heads_temp], bp
-
-	mul	word [cs:drive_heads_temp] ; HD, so multiply by computed head count
-
-	mov	bp, [cs:hd_max_sector] ; We previously calculated maximum HD track, so number of tracks is 1 more
-	mov	[cs:drive_sectors_temp], bp
-
-chs_continue:
-
-	xchg	ax, bx
-
-	pop	dx
-
-	xchg	dh, dl
-	mov	dh, 0
-	add	bx, dx
-
-	mov	ax, [cs:drive_sectors_temp]
-	mul	bx
-
-	; Now we extract the sector number (from 1 to 63) - for some reason they start from 1
-
-	pop	cx
-	mov	ch, 0
-	and	cl, 0x3F
-	dec	cl
-
-	add	ax, cx
-	adc	dx, 0
-	mov	bp, ax
-	mov	si, dx
-
-	; Now, SI:BP contains offset into disk image file (FD or HD)
-
-	pop	dx
-	pop	cx
 	pop	bx
 	pop	ax
 	ret
@@ -2642,30 +2099,12 @@ vmem_done:
 
 bios_data:
 
-com1addr	dw	0
-com2addr	dw	0
-com3addr	dw	0
-com4addr	dw	0
-lpt1addr	dw	0
-lpt2addr	dw	0
-lpt3addr	dw	0
-lpt4addr	dw	0
-equip		dw	0b0000000100100001
-		db	0
-memsize		dw	0x280
-		db	0
-		db	0
 keyflags1	db	0
 keyflags2	db	0
 		db	0
 kbbuf_head	dw	kbbuf-bios_data
 kbbuf_tail	dw	kbbuf-bios_data
 kbbuf: times 32	db	'X'
-drivecal	db	0
-diskmotor	db	0
-motorshutoff	db	0x07
-disk_laststatus	db	0
-times 7		db	0
 vidmode		db	0x03
 vid_cols	dw	80
 page_size	dw	0x1000
@@ -2685,11 +2124,6 @@ clk_rollover	db	0
 ctrl_break	db	0
 soft_rst_flg	dw	0x1234
 		db	0
-num_hd		db	0
-		db	0
-		db	0
-		dd	0
-		dd	0
 kbbuf_start_ptr	dw	0x001e
 kbbuf_end_ptr	dw	0x003e
 vid_rows	db	25         ; at 40:84
@@ -2728,7 +2162,7 @@ escape_flag	db	0
 notranslate_flg	db	0
 this_keystroke	db	0
 		db	0
-ending:		times (0xff-($-com1addr)) db	0
+ending:		times (0xff-($-bios_data)) db	0
 
 ; Keyboard scan code tables
 

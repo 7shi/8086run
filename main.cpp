@@ -381,11 +381,8 @@ extern "C" void intr(int n) {
                 // TODO
                 switch (AH) {
                     case 0x00: // get system time
-                    case 0x01: // set system time
                     case 0x02: // get RTC time
-                    case 0x03: // set RTC time
                     case 0x04: // get RTC date
-                    case 0x05: // set RTC date
                         break;
                 }
                 break;

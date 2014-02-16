@@ -40,43 +40,13 @@ bios_entry:
 
 	mov	sp, 0xf000
 	mov	ss, sp
-
-	push	cs
-	pop	es
-
-	; Now we can do whatever we want!
-
-	; Check cold boot/warm boot. We initialise disk parameters on cold boot only
-
-	cmp	byte [cs:boot_state], 0	; Cold boot?
-	jne	boot
-
-	mov	byte [cs:boot_state], 1	; Set flag so next boot will be warm boot
-
-; Main BIOS entry point. Zero the flags, and set up registers.
-
-boot:	mov	ax, 0
-	push	ax
-	popf
-
-	push	cs
-	push	cs
-	pop	ds
-	pop	ss
-	mov	sp, 0xf000
-	
-; Set up the IVT. First we zero out the table
-
-	cld
-
-	mov	ax, 0
-	mov	es, ax
-	mov	di, 0
-	mov	cx, 512
-	rep	stosw
+	mov	es, sp
+	mov	ds, sp
 
 ; Then we load in the pointers to our interrupt handlers
 
+	mov	ax, 0
+	mov	es, ax
 	mov	di, 0
 	mov	si, int_table
 	mov	cx, [itbl_size]
@@ -1549,7 +1519,6 @@ rom_config	dw 16		; 16 bytes following
 
 ; Internal state variables
 
-boot_state	db 0
 cga_refresh_reg	db 0
 
 ; Default interrupt handlers

@@ -42,7 +42,6 @@ extern unsigned short IP, r[];
 #define AL *r8[0]
 #define DL *r8[2]
 
-unsigned char trap_flag;
 unsigned short inst_counter;
 unsigned int int8_asap;
 time_t clock_buf;
@@ -83,12 +82,6 @@ int compat_8t() {
         // Set flag to execute an INT 8 as soon as appropriate (see below)
         int8_asap = 1;
     }
-
-    // Application has set trap flag, so fire INT 1
-    if (trap_flag)
-        intr(1);
-
-    trap_flag = TF;
 
     // If an INT 8 is pending, and no segment overrides or REP prefixes are active, and IF is enabled, and TF is disabled,
     // then process the INT 8 and check for new keystrokes from the terminal

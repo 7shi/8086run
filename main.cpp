@@ -347,13 +347,22 @@ extern "C" void intr(int n) {
                         return;
                     }
                     case 0x08: // get drive params
+                        AX = 0;
+                        BL = 4; // 1440KB
+                        CH = 79;
+                        CL = 18;
+                        DH = 1;
+                        DL = 1;
+                        ES = DI = 0;
+                        CF = 0;
+                        return;
                     case 0x15: // get disk type
-                        break;
-                    case 0x41: // int 13 extension check
-                        CF = 1;
+                        AH = 1;
+                        CF = 0;
                         return;
                 }
-                break;
+                CF = 1;
+                return;
             case 0x16: // keyboard
                 switch (AH) {
                     case 0x00: // get keystroke

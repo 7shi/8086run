@@ -513,136 +513,6 @@ int10:
 
 	iret
 
-int10_scroll_up_vmem_update:
-
-	;pop	es
-
-	; Now, we need to update video memory
-
-	push	bx
-	push	ax
-
-	push	ds
-	push	es
-	push	cx
-	push	dx
-	push	si
-	push	di
-
-	push	bx
-
-	mov	bx, 0xb800
-	mov	es, bx
-	mov	ds, bx
-
-	pop	bx
-
-    cls_vmem_scroll_up_next_line:
-
-	cmp	bl, 0
-	je	cls_vmem_scroll_up_done
-
-    cls_vmem_scroll_up_one:
-
-	push	bx
-	push	dx
-
-	mov	ax, 0
-	mov	al, ch		; Start row number is now in AX
-	mov	bx, 80
-	mul	bx
-	add	al, cl
-	adc	ah, 0		; Character number is now in AX
-	mov	bx, 2
-	mul	bx		; Memory location is now in AX
-
-	pop	dx
-	pop	bx
-
-	mov	di, ax
-	mov	si, ax
-	add	si, 2*80	; In a moment we will copy CX words from DS:SI to ES:DI
-
-	mov	ax, 0
-	add	al, dl
-	adc	ah, 0
-	inc	ax
-	sub	al, cl
-	sbb	ah, 0		; AX now contains the number of characters from the row to copy
-
-	cmp	ch, dh
-	jae	cls_vmem_scroll_up_one_done
-
-	;jne	vmem_scroll_up_copy_next_row
-
-	;push	cx
-	;mov	cx, ax
-	;mov	ah, 0x47
-	;mov	al, 0
-	;cld
-	;rep	stosw
-	;pop	cx
-
-	;jmp	cls_vmem_scroll_up_one_done
-
-vmem_scroll_up_copy_next_row:
-
-	push	cx
-	mov	cx, ax		; CX is now the length (in words) of the row to copy
-	cld
-	rep	movsw		; Scroll the line up
-	pop	cx
-
-	inc	ch		; Move onto the next row
-	jmp	cls_vmem_scroll_up_one
-
-    cls_vmem_scroll_up_one_done:
-
-	push	cx
-	mov	cx, ax		; CX is now the length (in words) of the row to copy
-	mov	ah, bh		; Attribute for new line
-	mov	al, 0		; Write 0 to video memory for new characters
-	cld
-	rep	stosw
-	pop	cx
-
-	dec	bl		; Scroll whole text block another line
-	jmp	cls_vmem_scroll_up_next_line	
-
-    cls_vmem_scroll_up_done:
-
-	mov	al, 0x1B	; Escape
-	extended_putchar_al
-	mov	al, '['		; ANSI
-	extended_putchar_al
-	mov	al, '0'		; Reset attributes
-	extended_putchar_al
-	mov	al, 'm'
-	extended_putchar_al
-
-	;int	8		; Force display update after scroll
-	;int	8		; Force display update after scroll
-	;int	8		; Force display update after scroll
-	;int	8		; Force display update after scroll
-	;int	8		; Force display update after scroll
-	;int	8		; Force display update after scroll
-	;int	8		; Force display update after scroll
-	;int	8		; Force display update after scroll
-
-	pop	di
-	pop	si
-	pop	dx
-	pop	cx
-	pop	es
-	pop	ds
-
-	pop	ax
-	pop	bx
-
-	; pop	bx
-	; pop	ax
-	iret
-	
   int10_write_char:
 
 	; First we kind of write the character to "video memory". This is so that
@@ -700,20 +570,6 @@ vmem_scroll_up_copy_next_row:
 	cmp	byte [es:curpos_y-bios_data], 25
 	jb	int10_write_char_done
 	mov	byte [es:curpos_y-bios_data], 24
-
-	push	cx
-	push	dx
-
-	mov	bx, 0x0701
-	mov	cx, 0
-	mov	dx, 0x184f
-
-	pushf
-	push	cs
-	call	int10_scroll_up_vmem_update
-
-	pop	dx
-	pop	cx
 
     int10_write_char_done:
 
@@ -1141,104 +997,6 @@ kb_adjust_buf:
 	pop	ax
 	ret
 
-; Clear screen using ANSI codes. Also clear video memory with attribute in BH
-
-clear_screen:
-
-	push	ax
-
-	mov	al, 0x1B	; Escape
-	extended_putchar_al
-	mov	al, '['		; ANSI
-	extended_putchar_al
-	mov	al, 'r'		; Set scrolling window
-	extended_putchar_al
-
-	mov	al, 0x1B	; Escape
-	extended_putchar_al
-	mov	al, '['		; ANSI
-	extended_putchar_al
-	mov	al, '0'		; Reset attributes
-	extended_putchar_al
-	mov	al, 'm'		; Reset attributes
-	extended_putchar_al
-
-	push	bx
-	push	cx
-	push	bp
-	push	ax
-	push	es
-
-	mov	bp, bx		; Convert from CGA to ANSI
-	mov	cl, 12
-	ror	bp, cl
-	and	bp, 7
-	mov	bl, byte [cs:bp+colour_table]
-	add	bl, 10
-
-	mov	al, 0x1B	; Escape
-	extended_putchar_al
-	mov	al, '['		; ANSI
-	extended_putchar_al
-	mov	al, bl		; Background colour
-	call	puts_decimal_al
-	mov	al, 'm'		; Set cursor position command
-	extended_putchar_al
-
-	mov	ax, 0x40
-	mov	es, ax
-	mov	byte [es:curpos_x-bios_data], 0
-	mov	byte [es:curpos_y-bios_data], 0
-
-	pop	es
-	pop	ax
-	pop	bp
-	pop	cx
-	pop	bx
-
-	mov	al, 0x1B	; Escape
-	extended_putchar_al
-	mov	al, '['		; ANSI
-	extended_putchar_al
-	mov	al, '2'		; Clear screen
-	extended_putchar_al
-	mov	al, 'J'
-	extended_putchar_al
-
-	mov	al, 0x1B	; Escape
-	extended_putchar_al
-	mov	al, '['		; ANSI
-	extended_putchar_al
-	mov	al, '1'		; Cursor row 1
-	extended_putchar_al
-	mov	al, ';'
-	extended_putchar_al
-	mov	al, '1'		; Cursor column 1
-	extended_putchar_al
-	mov	al, 'H'		; Set cursor
-	extended_putchar_al
-
-	push	es
-	push	di
-	push	cx
-
-	cld
-	mov	ax, 0xb800
-	mov	es, ax
-	mov	di, 0
-	mov	al, 0
-	mov	ah, bh
-	mov	cx, 80*25
-	rep	stosw
-
-	pop	cx
-	pop	di
-	pop	es
-
-	pop	ax
-
-	ret
-
 ; Pushes a key press, followed by a key release, event to I/O port 0x60 and calls
 ; INT 9.
 
@@ -1459,10 +1217,6 @@ int_table	dw int0
           	dw int1e
 
 itbl_size	dw $-int_table
-
-; Colour table for converting CGA video memory colours to ANSI colours
-
-colour_table	db	30, 34, 32, 36, 31, 35, 33, 37
 
 ; Int 8 call counter - used for timer slowdown
 

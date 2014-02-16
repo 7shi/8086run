@@ -22,7 +22,7 @@
 // Global variable definitions
 
 extern unsigned char mem[], IF, TF;
-extern unsigned short IP, r[];
+extern unsigned short IP;
 extern FILE *fdimg;
 
 extern struct SReg {
@@ -30,8 +30,6 @@ extern struct SReg {
     unsigned short v;
 } sr[];
 
-#define BX r[3]
-#define ES sr[0]
 #define CS sr[1]
 
 unsigned short inst_counter;
@@ -91,11 +89,4 @@ int compat_8t() {
 
     // Instruction execution loop. Terminates if CS:IP = 0:0
     return IP || CS.v;
-}
-
-// Emulator-specific 0F xx opcodes
-
-void hypcall_8t(int n) {
-    fprintf(stderr, "%04x:%04x 0f%02x invalid hyper call\n", CS.v, IP, n);
-    exit(1);
 }

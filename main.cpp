@@ -10,7 +10,6 @@
 
 extern "C" void init_8t(const char *, const char *);
 extern "C" int compat_8t();
-extern "C" void hypcall_8t(int);
 
 uint8_t mem[0x110000], io[0x10000];
 uint16_t IP, r[8];
@@ -520,8 +519,6 @@ void step(uint8_t rep, SReg *seg) {
         case 0x0e: // push cs
             ++IP;
             return push(*CS);
-        case 0x0f: // cable3 hyper call
-            return hypcall_8t(p[1]);
         case 0x10: // adc r/m, reg8
         case 0x11: // adc r/m, reg16
         case 0x12: // adc reg8, r/m

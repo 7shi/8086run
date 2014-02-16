@@ -7,8 +7,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
-#include <memory.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -38,7 +36,6 @@ extern struct SReg {
 
 unsigned short inst_counter;
 unsigned int int8_asap;
-time_t clock_buf;
 
 // Execute INT #interrupt_num on the emulated machine
 
@@ -99,13 +96,6 @@ int compat_8t() {
 // Emulator-specific 0F xx opcodes
 
 void hypcall_8t(int n) {
-    switch (n) {
-        case 1: // GET_RTC
-            IP += 2;
-            time(&clock_buf);
-            memcpy(ES.p + BX, localtime(&clock_buf), sizeof (struct tm));
-            return;
-    }
     fprintf(stderr, "%04x:%04x 0f%02x invalid hyper call\n", CS.v, IP, n);
     exit(1);
 }

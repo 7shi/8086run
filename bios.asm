@@ -11,15 +11,6 @@
 
 %define	biosbase 0x000f			; BIOS loads at segment 0xF000
 
-; Here we define macros for some custom instructions that help the emulator talk with the outside
-; world. They are described in detail in the hint.html file, which forms part of the emulator
-; distribution.
-
-%macro	extended_get_rtc 0
-	db	0x0f
-	db	0x01
-%endmacro
-
 org	100h				; BIOS loads at offset 0x0100
 
 main:
@@ -599,159 +590,6 @@ int16:
 
 	iret
 
-; ************************* INT 1Ah - clock
-
-int1a:
-	cmp	ah, 0
-	je	int1a_getsystime ; Get ticks since midnight (used for RTC time)
-	cmp	ah, 2
-	je	int1a_gettime ; Get RTC time (not actually used by DOS)
-	cmp	ah, 4
-	je	int1a_getdate ; Get RTC date
-	cmp	ah, 0x0f
-	je	int1a_init    ; Initialise RTC
-
-	iret
-
-  int1a_getsystime:
-
-	push	ax
-	push	bx
-	push	ds
-	push	es
-
-	push	cs
-	push	cs
-	pop	ds
-	pop	es
-
-	mov	bx, timetable
-
-	extended_get_rtc
-
-	mov	ax, 182  ; Clock ticks in 10 seconds
-	mul	word [tm_sec]
-	mov	bx, 10
-	mov	dx, 0
-	div	bx ; AX now contains clock ticks in seconds counter
-	mov	[tm_sec], ax
-
-	mov	ax, 1092 ; Clock ticks in a minute
-	mul	word [tm_min] ; AX now contains clock ticks in minutes counter
-	mov	[tm_min], ax
-	
-	mov	ax, 65520 ; Clock ticks in an hour
-	mul	word [tm_hour] ; DX:AX now contains clock ticks in hours counter
-
-	add	ax, [tm_sec] ; Add seconds in to AX
-	adc	dx, 0 ; Carry into DX if necessary
-	add	ax, [tm_min] ; Add minutes in to AX
-	adc	dx, 0 ; Carry into DX if necessary
-
-	push	dx
-	push	ax
-	pop	dx
-	pop	cx
-
-	pop	es
-	pop	ds
-	pop	bx
-	pop	ax
-
-	mov	al, 0
-	iret
-
-  int1a_gettime:
-
-	; Return the system time in BCD format. DOS doesn't use this, but we need to return
-	; something or the system thinks there is no RTC.
-
-	push	ds
-	push	es
-	push	ax
-	push	bx
-
-	push	cs
-	push	cs
-	pop	ds
-	pop	es
-
-	mov	bx, timetable
-
-	extended_get_rtc
-
-	mov	ax, 0
-	mov	cx, [tm_hour]
-	call	hex_to_bcd
-	mov	bh, al		; Hour in BCD is in BH
-
-	mov	ax, 0
-	mov	cx, [tm_min]
-	call	hex_to_bcd
-	mov	bl, al		; Minute in BCD is in BL
-
-	mov	ax, 0
-	mov	cx, [tm_sec]
-	call	hex_to_bcd
-	mov	dh, al		; Second in BCD is in DH
-
-	mov	dl, 0		; Daylight saving flag = 0 always
-
-	mov	cx, bx		; Hour:minute now in CH:CL
-
-	pop	bx
-	pop	ax
-	pop	es
-	pop	ds
-
-	jmp	reach_stack_clc
-
-  int1a_getdate:
-
-	; Return the system date in BCD format.
-
-	push	ds
-	push	es
-	push	bx
-	push	ax
-
-	push	cs
-	push	cs
-	pop	ds
-	pop	es
-
-	mov	bx, timetable
-
-	extended_get_rtc
-
-	mov	ax, 0x1900
-	mov	cx, [tm_year]
-	call	hex_to_bcd
-	mov	cx, ax
-	push	cx
-
-	mov	ax, 1
-	mov	cx, [tm_mon]
-	call	hex_to_bcd
-	mov	dh, al
-
-	mov	ax, 0
-	mov	cx, [tm_mday]
-	call	hex_to_bcd
-	mov	dl, al
-
-	pop	cx
-	pop	ax
-	pop	bx
-	pop	es
-	pop	ds
-
-	jmp	reach_stack_clc
-
-  int1a_init:
-
-	jmp	reach_stack_clc
-
 ; ************************* INT 1Eh - diskette parameter table
 
 int1e_spt	db 0xff	; 18 sectors per track (1.44MB)
@@ -798,6 +636,7 @@ int15:
 int17:
 int18:
 int19:
+int1a:
 int1b:
 int1c:
 int1d:
@@ -806,47 +645,6 @@ int1e:
 iret
 
 ; ************ Function call library ************
-
-; Hex to BCD routine. Input is AX in hex (can be 0), and adds CX in hex to it, forming a BCD output in AX.
-
-hex_to_bcd:
-
-	push	bx
-
-	jcxz	h2bfin
-
-  h2bloop:
-
-	inc	ax
-
-	; First process the low nibble of AL
-	mov	bh, al
-	and	bh, 0x0f
-	cmp	bh, 0x0a
-	jne	c1
-	add	ax, 0x0006
-
-	; Then the high nibble of AL
-  c1:
-	mov	bh, al
-	and	bh, 0xf0
-	cmp	bh, 0xa0
-	jne	c2
-	add	ax, 0x0060
-
-	; Then the low nibble of AH
-  c2:	
-	mov	bh, ah
-	and	bh, 0x0f
-	cmp	bh, 0x0a
-	jne	c3
-	add	ax, 0x0600
-
-  c3:	
-	loop	h2bloop
-  h2bfin:
-	pop	bx
-	ret
 
 ; Keyboard adjust buffer head and tail. If either head or the tail are at the end of the buffer, reset them
 ; back to the start, since it is a circular buffer.
@@ -911,32 +709,6 @@ keypress_release:
 	pop	ax
 
 	ret
-
-; Reaches up into the stack before the end of an interrupt handler, and sets the carry flag
-
-reach_stack_stc:
-
-	xchg	bp, sp
-	or	word [bp+4], 1
-	xchg	bp, sp
-	iret
-
-; Reaches up into the stack before the end of an interrupt handler, and clears the carry flag
-
-reach_stack_clc:
-
-	xchg	bp, sp
-	and	word [bp+4], 0xfffe
-	xchg	bp, sp
-	iret
-
-; Reaches up into the stack before the end of an interrupt handler, and returns with the current
-; setting of the carry flag
-
-reach_stack_carry:
-
-	jc	reach_stack_stc
-	jmp	reach_stack_clc
 
 ; ****************************************************************************************
 ; That's it for the code. Now, the data tables follow.
@@ -1108,17 +880,3 @@ itbl_size	dw $-int_table
 ; Int 8 call counter - used for timer slowdown
 
 int8_call_cnt	db	0
-
-; This is the format of the 36-byte tm structure, returned by the emulator's RTC query call
-
-timetable:
-
-tm_sec		equ $
-tm_min		equ $+4
-tm_hour		equ $+8
-tm_mday		equ $+12
-tm_mon		equ $+16
-tm_year		equ $+20
-tm_wday		equ $+24
-tm_yday		equ $+28
-tm_dst		equ $+32

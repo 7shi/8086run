@@ -23,7 +23,7 @@
 
 // Global variable definitions
 
-extern unsigned char mem[], *r8[], IF, TF;
+extern unsigned char mem[], IF, TF;
 extern unsigned short IP, r[];
 extern FILE *fdimg;
 
@@ -33,7 +33,6 @@ extern struct SReg {
 } sr[];
 
 #define BX r[3]
-#define AL *r8[0]
 #define ES sr[0]
 #define CS sr[1]
 
@@ -101,10 +100,6 @@ int compat_8t() {
 
 void hypcall_8t(int n) {
     switch (n) {
-        case 0: // PUTCHAR_AL
-            IP += 2;
-            write(1, &AL, 1);
-            return;
         case 1: // GET_RTC
             IP += 2;
             time(&clock_buf);

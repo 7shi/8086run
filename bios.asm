@@ -15,11 +15,6 @@
 ; world. They are described in detail in the hint.html file, which forms part of the emulator
 ; distribution.
 
-%macro	extended_putchar_al 0
-	db	0x0f
-	db	0x00
-%endmacro
-
 %macro	extended_get_rtc 0
 	db	0x0f
 	db	0x01
@@ -69,15 +64,6 @@ bios_entry:
 	mov	si, bios_data
 	mov	cx, 0x100
 	rep	movsb
-
-; Clear video memory
-
-	mov	ax, 0xb800
-	mov	es, ax
-	mov	di, 0
-	mov	cx, 80*25
-	mov	ax, 0x0700
-	rep	stosw
 
 ; Set up some I/O ports, between 0 and FFF. Most of them we set to 0xFF, to indicate no device present
 
@@ -504,83 +490,6 @@ i8_end:
 
 	iret
 
-; ************************* INT 10h handler - video services
-
-int10:
-
-	cmp	ah, 0x0e ; Write character at cursor position
-	je	int10_write_char
-
-	iret
-
-  int10_write_char:
-
-	; First we kind of write the character to "video memory". This is so that
-	; we can later retrieve it using the get character at cursor function,
-	; which GWBASIC uses.
-
-	push	ds
-	push	es
-	push	bx
-
-	mov	bx, 0x40
-	mov	es, bx
-
-	mov	bx, 0xb000
-	mov	ds, bx
-
-	mov	bx, 0
-	mov	bl, [es:curpos_x-bios_data]
-	shl	bx, 1
-	mov	[bx], al
-
-	cmp	al, 0x08
-	jne	int10_write_char_inc_x
-
-	dec	byte [es:curpos_x-bios_data]
-	cmp	byte [es:curpos_x-bios_data], 0
-	jg	int10_write_char_done
-
-	mov	byte [es:curpos_x-bios_data], 0    
-	jmp	int10_write_char_done
-
-    int10_write_char_inc_x:
-
-	cmp	al, 0x0A	; New line?
-	je	int10_write_char_newline
-
-	cmp	al, 0x0D	; Carriage return?
-	jne	int10_write_char_not_cr
-
-	mov	byte [es:curpos_x-bios_data],0
-	jmp	int10_write_char_done
-
-    int10_write_char_not_cr:
-
-	inc	byte [es:curpos_x-bios_data]
-	cmp	byte [es:curpos_x-bios_data], 80
-	jge	int10_write_char_newline
-	jmp	int10_write_char_done
-
-    int10_write_char_newline:
-
-	mov	byte [es:curpos_x-bios_data], 0
-	inc	byte [es:curpos_y-bios_data]
-
-	cmp	byte [es:curpos_y-bios_data], 25
-	jb	int10_write_char_done
-	mov	byte [es:curpos_y-bios_data], 24
-
-    int10_write_char_done:
-
-	pop	bx
-	pop	es
-	pop	ds
-
-	extended_putchar_al
-
-	iret
-
 ; ************************* INT 16h handler - keyboard
 
 int16:
@@ -880,6 +789,7 @@ intc:
 intd:
 inte:
 intf:
+int10:
 int11:
 int12:
 int13:
@@ -936,29 +846,6 @@ hex_to_bcd:
 	loop	h2bloop
   h2bfin:
 	pop	bx
-	ret
-
-; Takes a number in AL (from 0 to 99), and outputs the value in decimal using extended_putchar_al.
-
-puts_decimal_al:
-
-	push	ax
-	
-	aam
-	add	ax, 0x3030	; '00'
-	
-	xchg	ah, al		; First digit is now in AL
-	cmp	al, 0x30
-	je	pda_2nd		; First digit is zero, so print only 2nd digit
-
-	extended_putchar_al	; Print first digit
-
-  pda_2nd:
-	xchg	ah, al		; Second digit is now in AL
-
-	extended_putchar_al	; Print second digit
-
-	pop	ax
 	ret
 
 ; Keyboard adjust buffer head and tail. If either head or the tail are at the end of the buffer, reset them

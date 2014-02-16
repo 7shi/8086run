@@ -23,29 +23,23 @@
 
 // Global variable definitions
 
+extern unsigned char mem[], *r8[], IF, TF;
+extern unsigned short IP, r[];
+extern FILE *fdimg;
+
 extern struct SReg {
     unsigned char *p;
     unsigned short v;
 } sr[];
 
+#define BX r[3]
+#define AL *r8[0]
 #define ES sr[0]
 #define CS sr[1]
-
-extern unsigned char mem[], *r8[], IF, TF;
-extern unsigned short IP, r[];
-
-#define AX r[0]
-#define BX r[3]
-#define BP r[5]
-#define SI r[6]
-
-#define AL *r8[0]
-#define DL *r8[2]
 
 unsigned short inst_counter;
 unsigned int int8_asap;
 time_t clock_buf;
-FILE *fdimg;
 
 // Execute INT #interrupt_num on the emulated machine
 

@@ -14,6 +14,7 @@ uint16_t IP, r[8];
 uint8_t *r8[8];
 bool OF, DF, IF, TF, SF, ZF, AF, PF, CF;
 bool ptable[256];
+FILE *fdimg;
 
 #define AX r[0]
 #define CX r[1]
@@ -314,11 +315,37 @@ extern "C" void intr(int n) {
                 AX = 640;
                 return;
             case 0x13: // disk
+                if (DL != 0) { // not first fdd
+                    CF = 1; // error
+                    AH = 1; // invalid
+                    return;
+                }
                 switch (AH) {
                     case 0x00: // reset disk system
+                        CF = 0;
                         return;
                     case 0x02: // read sectors
                     case 0x03: // write sectors
+                    {
+                        if (DH > 1 || CH > 79 || CL < 1 || CL > 18) {
+                            CF = 1; // error
+                            AH = 4; // sector
+                            return;
+                        }
+                        int sect = 36 * CH + 18 * DH + CL - 1;
+                        if (fseek(fdimg, sect << 9, SEEK_SET) < 0) {
+                            CF = 1; // error
+                            AH = 4; // sector
+                            return;
+                        }
+                        if (AH == 2) {
+                            fread(&ES[BX], 512, AL, fdimg);
+                        } else {
+                            fwrite(&ES[BX], 512, AL, fdimg);
+                        }
+                        CF = 0;
+                        return;
+                    }
                     case 0x08: // get drive params
                     case 0x15: // get disk type
                         break;

@@ -139,28 +139,6 @@ void hypcall_8t(int n) {
             time(&clock_buf);
             memcpy(ES.p + BX, localtime(&clock_buf), sizeof (struct tm));
             return;
-        case 2: // READ_DISK
-            if (DL == 1) {
-                IP += 2;
-                if (fseek(fdimg, ((SI << 4) | BP) << 9, SEEK_SET) >= 0) {
-                    AL = fread(ES.p + BX, 1, AX, fdimg);
-                } else {
-                    AL = 0;
-                }
-                return;
-            }
-            break;
-        case 3: // WRITE_DISK
-            if (DL == 1) {
-                IP += 2;
-                if (fseek(fdimg, ((SI << 4) | BP) << 9, SEEK_SET) >= 0) {
-                    AL = fwrite(ES.p + BX, 1, AX, fdimg);
-                } else {
-                    AL = 0;
-                }
-                return;
-            }
-            break;
     }
     fprintf(stderr, "%04x:%04x 0f%02x invalid hyper call\n", CS.v, IP, n);
     exit(1);

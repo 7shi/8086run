@@ -109,22 +109,6 @@ void hypcall_8t(int n) {
     switch (n) {
         case 0: // PUTCHAR_AL
             IP += 2;
-#ifdef _WIN32
-            static int skip;
-            if (AL == 27) {
-                skip = -1;
-                return;
-            } else if (skip == -1) {
-                if (AL != '[') skip = 1;
-            } else if (skip == -2) {
-                if (AL == '?') {
-                    skip = 4;
-                } else {
-                    skip = 2;
-                }
-            }
-            if (skip && skip--) return;
-#endif
             write(1, &AL, 1);
             return;
         case 1: // GET_RTC

@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <time.h>
 
 extern "C" void init_8t(const char *, const char *);
 extern "C" int compat_8t();
@@ -16,6 +17,8 @@ uint16_t IP, r[8];
 uint8_t *r8[8];
 bool OF, DF, IF, TF, SF, ZF, AF, PF, CF;
 bool ptable[256];
+
+int ticks;
 FILE *fdimg;
 
 #define AX r[0]
@@ -300,6 +303,10 @@ inline uint16_t pop() {
     return val;
 }
 
+inline int bcd(int v) {
+    return ((v / 10) << 4) | (v % 10);
+}
+
 extern "C" void intr(int n) {
     uint8_t *v = &mem[n << 2];
     uint16_t cs = read16(v + 2), ip = read16(v);
@@ -378,12 +385,34 @@ extern "C" void intr(int n) {
                 }
                 break;
             case 0x1a: // time
-                // TODO
                 switch (AH) {
                     case 0x00: // get system time
+                        AL = 0;
+                        CX = ticks >> 16;
+                        DX = ticks;
+                        return;
+                    case 0x01: // set system time
+                        ticks = (CX << 16) | DX;
+                        return;
                     case 0x02: // get RTC time
                     case 0x04: // get RTC date
-                        break;
+                    {
+                        time_t t = time(NULL);
+                        tm *lt = localtime(&t);
+                        if (AH == 2) {
+                            CH = bcd(lt->tm_hour);
+                            CL = bcd(lt->tm_min);
+                            DH = bcd(lt->tm_sec);
+                            DL = lt->tm_isdst == 1 ? 1 : 0;
+                        } else {
+                            CH = bcd(lt->tm_year / 100 + 19);
+                            CL = bcd(lt->tm_year % 100);
+                            DH = bcd(lt->tm_mon + 1);
+                            DL = bcd(lt->tm_mday);
+                        }
+                        CF = 0;
+                        return;
+                    }
                 }
                 break;
         }
@@ -1287,5 +1316,12 @@ int main(int argc, char *argv[]) {
             r8[i + 4] = r8[i] - 1;
         }
     }
-    while (compat_8t()) step(0, NULL);
+    int counter = 10000;
+    while (compat_8t()) {
+        if (!--counter) {
+            ++ticks;
+            counter = 10000;
+        }
+        step(0, NULL);
+    }
 }

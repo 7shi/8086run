@@ -2068,12 +2068,30 @@ vmem_done:
 
 bios_data:
 
+com1addr	dw	0
+com2addr	dw	0
+com3addr	dw	0
+com4addr	dw	0
+lpt1addr	dw	0
+lpt2addr	dw	0
+lpt3addr	dw	0
+lpt4addr	dw	0
+equip		dw	0b0000000100100001
+		db	0
+memsize		dw	0x280
+		db	0
+		db	0
 keyflags1	db	0
 keyflags2	db	0
 		db	0
 kbbuf_head	dw	kbbuf-bios_data
 kbbuf_tail	dw	kbbuf-bios_data
 kbbuf: times 32	db	'X'
+drivecal	db	0
+diskmotor	db	0
+motorshutoff	db	0x07
+disk_laststatus	db	0
+times 7		db	0
 vidmode		db	0x03
 vid_cols	dw	80
 page_size	dw	0x1000
@@ -2093,6 +2111,11 @@ clk_rollover	db	0
 ctrl_break	db	0
 soft_rst_flg	dw	0x1234
 		db	0
+num_hd		db	0
+		db	0
+		db	0
+		dd	0
+		dd	0
 kbbuf_start_ptr	dw	0x001e
 kbbuf_end_ptr	dw	0x003e
 vid_rows	db	25         ; at 40:84

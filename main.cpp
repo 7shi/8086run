@@ -371,11 +371,15 @@ void bios(int n) {
             CF = 1;
             return;
         case 0x16: // keyboard
-            // TODO
             switch (AH) {
                 case 0x00: // get keystroke
-                case 0x01: // check for keystroke
+                    // TODO
                     break;
+                case 0x01: // check for keystroke
+                    // TODO
+                    ZF = 1;
+                    AX = 0;
+                    return;
             }
             break;
         case 0x1a: // time

@@ -418,6 +418,8 @@ extern "C" void intr(int n) {
                 }
                 break;
         }
+        fprintf(stderr, "%04x:%04x int %02x,%02x not implemented\n", *CS, IP, n, AH);
+        exit(1);
     }
     push(getf());
     IF = TF = 0;

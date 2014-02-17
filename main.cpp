@@ -17,7 +17,8 @@ uint8_t *r8[8];
 bool OF, DF, IF, TF, SF, ZF, AF, PF, CF;
 bool ptable[256];
 
-int ticks;
+clock_t start;
+uint32_t ticks;
 FILE *fdimg;
 
 #define AX r[0]
@@ -386,11 +387,16 @@ extern "C" void intr(int n) {
             case 0x1a: // time
                 switch (AH) {
                     case 0x00: // get system time
-                        AL = 0;
-                        CX = ticks >> 16;
-                        DX = ticks;
+                    {
+                        clock_t d = clock() - start;
+                        uint32_t t = ticks + (d << 12) / (CLOCKS_PER_SEC * 225);
+                        if ((AL = t > 0x240000)) t %= 0x240000;
+                        CX = t >> 16;
+                        DX = t;
                         return;
+                    }
                     case 0x01: // set system time
+                        start = clock();
                         ticks = (CX << 16) | DX;
                         return;
                     case 0x02: // get RTC time
@@ -1313,12 +1319,8 @@ int main(int argc, char *argv[]) {
             r8[i + 4] = r8[i] - 1;
         }
     }
-    int counter = 10000;
+    start = clock();
     while (compat_8t()) {
-        if (!--counter) {
-            ++ticks;
-            counter = 10000;
-        }
         step(0, NULL);
     }
 }

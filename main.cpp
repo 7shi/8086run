@@ -304,123 +304,125 @@ inline int bcd(int v) {
     return ((v / 10) << 4) | (v % 10);
 }
 
-extern "C" void intr(int n) {
+void bios(int n) {
+    switch (n) {
+        case 0x08: // timer
+            // TODO
+            break;
+        case 0x10: // video
+            if (AH == 0x0e) {
+                write(1, &AL, 1);
+                return;
+            }
+            break;
+        case 0x11: // get equipment list
+            AX = 0;
+            return;
+        case 0x12: // get memory size
+            AX = 640;
+            return;
+        case 0x13: // disk
+            if (DL != 0) { // not first fdd
+                CF = 1; // error
+                AH = 1; // invalid
+                return;
+            }
+            switch (AH) {
+                case 0x00: // reset disk system
+                    CF = 0;
+                    return;
+                case 0x02: // read sectors
+                case 0x03: // write sectors
+                {
+                    if (DH > 1 || CH > 79 || CL < 1 || CL > 18) {
+                        CF = 1; // error
+                        AH = 4; // sector
+                        return;
+                    }
+                    int sect = 36 * CH + 18 * DH + CL - 1;
+                    if (fseek(fdimg, sect << 9, SEEK_SET) < 0) {
+                        CF = 1; // error
+                        AH = 4; // sector
+                        return;
+                    }
+                    if (AH == 2) {
+                        fread(&ES[BX], 512, AL, fdimg);
+                    } else {
+                        fwrite(&ES[BX], 512, AL, fdimg);
+                    }
+                    CF = 0;
+                    return;
+                }
+                case 0x08: // get drive params
+                    AX = 0;
+                    BL = 4; // 1440KB
+                    CH = 79;
+                    CL = 18;
+                    DH = 1;
+                    DL = 1;
+                    ES = DI = 0;
+                    CF = 0;
+                    return;
+                case 0x15: // get disk type
+                    AH = 1;
+                    CF = 0;
+                    return;
+            }
+            CF = 1;
+            return;
+        case 0x16: // keyboard
+            // TODO
+            switch (AH) {
+                case 0x00: // get keystroke
+                case 0x01: // check for keystroke
+                    break;
+            }
+            break;
+        case 0x1a: // time
+            switch (AH) {
+                case 0x00: // get system time
+                {
+                    clock_t d = clock() - start;
+                    uint32_t t = ticks + (d << 12) / (CLOCKS_PER_SEC * 225);
+                    if ((AL = t > 0x240000)) t %= 0x240000;
+                    CX = t >> 16;
+                    DX = t;
+                    return;
+                }
+                case 0x01: // set system time
+                    start = clock();
+                    ticks = (CX << 16) | DX;
+                    return;
+                case 0x02: // get RTC time
+                case 0x04: // get RTC date
+                {
+                    time_t t = time(NULL);
+                    tm *lt = localtime(&t);
+                    if (AH == 2) {
+                        CH = bcd(lt->tm_hour);
+                        CL = bcd(lt->tm_min);
+                        DH = bcd(lt->tm_sec);
+                        DL = lt->tm_isdst == 1 ? 1 : 0;
+                    } else {
+                        CH = bcd(lt->tm_year / 100 + 19);
+                        CL = bcd(lt->tm_year % 100);
+                        DH = bcd(lt->tm_mon + 1);
+                        DL = bcd(lt->tm_mday);
+                    }
+                    CF = 0;
+                    return;
+                }
+            }
+            break;
+    }
+    fprintf(stderr, "%04x:%04x int %02x,%02x not implemented\n", *CS, IP, n, AH);
+    exit(1);
+}
+
+void intr(int n) {
     uint8_t *v = &mem[n << 2];
     uint16_t cs = read16(v + 2), ip = read16(v);
-    if (!cs && !ip) {
-        switch (n) {
-            case 0x08: // timer
-                // TODO
-                break;
-            case 0x10: // video
-                if (AH == 0x0e) {
-                    write(1, &AL, 1);
-                    return;
-                }
-                break;
-            case 0x11: // get equipment list
-                AX = 0;
-                return;
-            case 0x12: // get memory size
-                AX = 640;
-                return;
-            case 0x13: // disk
-                if (DL != 0) { // not first fdd
-                    CF = 1; // error
-                    AH = 1; // invalid
-                    return;
-                }
-                switch (AH) {
-                    case 0x00: // reset disk system
-                        CF = 0;
-                        return;
-                    case 0x02: // read sectors
-                    case 0x03: // write sectors
-                    {
-                        if (DH > 1 || CH > 79 || CL < 1 || CL > 18) {
-                            CF = 1; // error
-                            AH = 4; // sector
-                            return;
-                        }
-                        int sect = 36 * CH + 18 * DH + CL - 1;
-                        if (fseek(fdimg, sect << 9, SEEK_SET) < 0) {
-                            CF = 1; // error
-                            AH = 4; // sector
-                            return;
-                        }
-                        if (AH == 2) {
-                            fread(&ES[BX], 512, AL, fdimg);
-                        } else {
-                            fwrite(&ES[BX], 512, AL, fdimg);
-                        }
-                        CF = 0;
-                        return;
-                    }
-                    case 0x08: // get drive params
-                        AX = 0;
-                        BL = 4; // 1440KB
-                        CH = 79;
-                        CL = 18;
-                        DH = 1;
-                        DL = 1;
-                        ES = DI = 0;
-                        CF = 0;
-                        return;
-                    case 0x15: // get disk type
-                        AH = 1;
-                        CF = 0;
-                        return;
-                }
-                CF = 1;
-                return;
-            case 0x16: // keyboard
-                // TODO
-                switch (AH) {
-                    case 0x00: // get keystroke
-                    case 0x01: // check for keystroke
-                        break;
-                }
-                break;
-            case 0x1a: // time
-                switch (AH) {
-                    case 0x00: // get system time
-                    {
-                        clock_t d = clock() - start;
-                        uint32_t t = ticks + (d << 12) / (CLOCKS_PER_SEC * 225);
-                        if ((AL = t > 0x240000)) t %= 0x240000;
-                        CX = t >> 16;
-                        DX = t;
-                        return;
-                    }
-                    case 0x01: // set system time
-                        start = clock();
-                        ticks = (CX << 16) | DX;
-                        return;
-                    case 0x02: // get RTC time
-                    case 0x04: // get RTC date
-                    {
-                        time_t t = time(NULL);
-                        tm *lt = localtime(&t);
-                        if (AH == 2) {
-                            CH = bcd(lt->tm_hour);
-                            CL = bcd(lt->tm_min);
-                            DH = bcd(lt->tm_sec);
-                            DL = lt->tm_isdst == 1 ? 1 : 0;
-                        } else {
-                            CH = bcd(lt->tm_year / 100 + 19);
-                            CL = bcd(lt->tm_year % 100);
-                            DH = bcd(lt->tm_mon + 1);
-                            DL = bcd(lt->tm_mday);
-                        }
-                        CF = 0;
-                        return;
-                    }
-                }
-                break;
-        }
-        fprintf(stderr, "%04x:%04x int %02x,%02x not implemented\n", *CS, IP, n, AH);
-        exit(1);
-    }
+    if (!cs && !ip) return bios(n);
     push(getf());
     IF = TF = 0;
     push(*CS);

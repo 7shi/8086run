@@ -80,6 +80,7 @@ inline int bcd(int v) {
 }
 
 void bios(int n) {
+    void intr(int);
     switch (n) {
         case 0x08: // timer
         {
@@ -93,6 +94,7 @@ void bios(int n) {
                 write16(&mem[0x46e], high);
             }
             write16(&mem[0x46c], low);
+            intr(0x1c);
             return;
         }
         case 0x10: // video
@@ -205,6 +207,8 @@ void bios(int n) {
                     return; // ignore
             }
             break;
+        case 0x1c: // timer handler
+            return;
     }
     fprintf(stderr, "%04x:%04x int %02x,%02x not implemented\n", *CS, IP, n, AH);
     exit(1);

@@ -14,8 +14,6 @@ uint8_t *r8[8];
 bool OF, DF, IF, TF, SF, ZF, AF, PF, CF;
 bool ptable[256];
 
-clock_t start;
-uint32_t ticks;
 FILE *fdimg;
 
 #define AX r[0]
@@ -84,8 +82,19 @@ inline int bcd(int v) {
 void bios(int n) {
     switch (n) {
         case 0x08: // timer
-            // TODO
-            break;
+        {
+            uint16_t low = read16(&mem[0x46c]);
+            if (!++low) {
+                uint16_t high = read16(&mem[0x46e]);
+                if (++high >= 24) {
+                    high %= 24;
+                    mem[0x470] = 1;
+                }
+                write16(&mem[0x46e], high);
+            }
+            write16(&mem[0x46c], low);
+            return;
+        }
         case 0x10: // video
             if (AH == 0x0e) {
                 write(1, &AL, 1);
@@ -162,17 +171,15 @@ void bios(int n) {
         case 0x1a: // time
             switch (AH) {
                 case 0x00: // get system time
-                {
-                    clock_t d = clock() - start;
-                    uint32_t t = ticks + (d << 12) / (CLOCKS_PER_SEC * 225);
-                    if ((AL = t > 0x240000)) t %= 0x240000;
-                    CX = t >> 16;
-                    DX = t;
+                    AL = mem[0x470];
+                    CX = read16(&mem[0x46e]);
+                    DX = read16(&mem[0x46c]);
+                    mem[0x470] = 0;
                     return;
-                }
                 case 0x01: // set system time
-                    start = clock();
-                    ticks = (CX << 16) | DX;
+                    write16(&mem[0x46e], CX);
+                    write16(&mem[0x46c], DX);
+                    mem[0x470] = 0;
                     return;
                 case 0x02: // get RTC time
                 case 0x04: // get RTC date
@@ -1334,8 +1341,21 @@ int main(int argc, char *argv[]) {
     ES = CS = SS = DS = 0;
     IP = 0x7c00;
     fread(&mem[IP], 1, 512, fdimg); // read MBR
-    start = clock();
+    const int interval = 100000;
+    int counter = interval, pitc = 0;
+    clock_t next = clock();
     while (IP || *CS) {
+        if (!--counter) {
+            clock_t c = clock();
+            while (c > next) {
+                intr(8);
+                int t1 = CLOCKS_PER_SEC * pitc * 225 / 4096;
+                int t2 = CLOCKS_PER_SEC * (++pitc) * 225 / 4096;
+                if (pitc == 4096) pitc = 0;
+                next += t2 - t1;
+            }
+            counter = interval;
+        }
         step(0, NULL);
     }
 }

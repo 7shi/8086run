@@ -1299,9 +1299,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "can not open: %s\n", argv[1]);
         return 1;
     }
-    ES = CS = SS = DS = 0;
-    IP = 0x7c00;
-    fread(&mem[IP], 1, 512, fdimg); // read MBR
+    
     for (int i = 0; i < 256; ++i) {
         int n = 0;
         for (int j = 1; j < 256; j += j) {
@@ -1309,6 +1307,7 @@ int main(int argc, char *argv[]) {
         }
         ptable[i] = (n & 1) == 0;
     }
+    
     uint16_t tmp = 0x1234;
     uint8_t *p = (uint8_t *) r;
     if (*(uint8_t *) & tmp == 0x34) {
@@ -1322,6 +1321,10 @@ int main(int argc, char *argv[]) {
             r8[i + 4] = r8[i] - 1;
         }
     }
+    
+    ES = CS = SS = DS = 0;
+    IP = 0x7c00;
+    fread(&mem[IP], 1, 512, fdimg); // read MBR
     start = clock();
     while (IP || *CS) {
         step(0, NULL);

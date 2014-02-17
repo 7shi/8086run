@@ -8,9 +8,6 @@
 #include <fcntl.h>
 #include <time.h>
 
-extern "C" void init_8t(const char *, const char *);
-extern "C" int compat_8t();
-
 uint8_t mem[0x110000], io[0x10000];
 uint16_t IP, r[8];
 uint8_t *r8[8];
@@ -310,7 +307,7 @@ inline int bcd(int v) {
 extern "C" void intr(int n) {
     uint8_t *v = &mem[n << 2];
     uint16_t cs = read16(v + 2), ip = read16(v);
-    if (cs == 0xf000) {
+    if (!cs && !ip) {
         switch (n) {
             case 0x08: // timer
                 // TODO
@@ -1292,13 +1289,17 @@ void step(uint8_t rep, SReg *seg) {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        fprintf(stderr, "usage: %s bios fdimage\n", argv[0]);
+    if (argc != 2) {
+        fprintf(stderr, "usage: %s fdimage\n", argv[0]);
         return 1;
     }
-    init_8t(argv[1], argv[2]);
-    CS = *CS;
-    ES = SS = DS = 0;
+    if (!(fdimg = fopen(argv[1], "rb"))) {
+        fprintf(stderr, "can not open: %s\n", argv[1]);
+        return 1;
+    }
+    ES = CS = SS = DS = 0;
+    IP = 0x7c00;
+    fread(&mem[IP], 1, 512, fdimg); // read MBR
     for (int i = 0; i < 256; ++i) {
         int n = 0;
         for (int j = 1; j < 256; j += j) {
@@ -1320,7 +1321,7 @@ int main(int argc, char *argv[]) {
         }
     }
     start = clock();
-    while (compat_8t()) {
+    while (IP || *CS) {
         step(0, NULL);
     }
 }

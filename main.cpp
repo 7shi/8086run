@@ -416,6 +416,9 @@ void bios(int n) {
                     CF = 0;
                     return;
                 }
+                case 0x03: // set RTC time
+                case 0x05: // set RTC date
+                    return; // ignore
             }
             break;
     }

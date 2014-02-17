@@ -98,11 +98,8 @@ void bios(int n) {
             return;
         }
         case 0x10: // video
-            if (AH == 0x0e) {
-                write(1, &AL, 1);
-                return;
-            }
-            break;
+            if (AH == 0x0e) write(1, &AL, 1);
+            return; // ignore
         case 0x11: // get equipment list
             AX = 0;
             return;

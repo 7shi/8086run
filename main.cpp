@@ -1415,6 +1415,7 @@ void step(uint8_t rep, SReg *seg) {
 }
 
 int main(int argc, char *argv[]) {
+    inittty();
     if (argc != 2) {
         fprintf(stderr, "usage: %s fdimage\n", argv[0]);
         return 1;
@@ -1423,7 +1424,6 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "can not open: %s\n", argv[1]);
         return 1;
     }
-    inittty();
 
     for (int i = 0; i < 256; ++i) {
         int n = 0;

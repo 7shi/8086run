@@ -7,7 +7,44 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <time.h>
+
+#ifdef WIN32
 #include <conio.h>
+#else
+#include <termios.h>
+
+int kbchar = EOF;
+
+int getch(bool block) {
+    termios t;
+    tcgetattr(STDIN_FILENO, &t);
+    termios oldt = t;
+    t.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &t);
+    int ret;
+    if (block) {
+        ret = getchar();
+    } else {
+        int f = fcntl(STDIN_FILENO, F_GETFL, 0);
+        fcntl(STDIN_FILENO, F_SETFL, f | O_NONBLOCK);
+        ret = getchar();
+        fcntl(STDIN_FILENO, F_SETFL, f);
+    }
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    return ret;
+}
+
+int getch() {
+    if (kbchar == EOF) return getch(true);
+    int ret = kbchar;
+    kbchar = EOF;
+    return ret;
+}
+
+int kbhit() {
+    return (kbchar = getch(false)) != EOF;
+}
+#endif
 
 uint8_t mem[0x110000], io[0x10000];
 uint16_t IP, r[8];

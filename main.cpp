@@ -437,7 +437,7 @@ inline uint16_t pop() {
 void intr(int n) {
     uint8_t *v = &mem[n << 2];
     uint16_t cs = read16(v + 2), ip = read16(v);
-    if (!cs && !ip) return bios(n);
+    if (!cs && ip < 0x20) return bios(ip);
     push(getf());
     IF = TF = 0;
     push(*CS);
@@ -1281,6 +1281,13 @@ void step(uint8_t rep, SReg *seg) {
                     push(*CS);
                     push(IP);
                     IP = opr1.loadf(&CS);
+                    if (!*CS && IP < 0x20) {
+                        uint16_t n = IP;
+                        IP = pop();
+                        CS = pop();
+                        setf(pop());
+                        bios(n);
+                    }
                     return;
                 case 4: // jmp
                     IP = *opr1;
@@ -1337,6 +1344,10 @@ int main(int argc, char *argv[]) {
             r8[i] = p + i * 2 + 1;
             r8[i + 4] = r8[i] - 1;
         }
+    }
+
+    for (int i = 0; i < 0x20; ++i) {
+        write16(&mem[i << 2], i);
     }
 
     ES = CS = SS = DS = 0;

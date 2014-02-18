@@ -51,7 +51,6 @@ void inittty() {
     struct sigaction sa;
     memset(&sa, 0, sizeof (sa));
     sa.sa_handler = resettty;
-    sa.sa_flags = SA_RESTART;
     sigaction(SIGINT, &sa, NULL);
 
     t.c_lflag &= ~(ICANON | ECHO);

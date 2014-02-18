@@ -121,11 +121,12 @@ void bios(int n) {
         {
             uint8_t ch = getch();
             if (ch < 128 && kbscan[ch]) {
+                int head = read16(&mem[0x41a]);
                 int tail = read16(&mem[0x41c]);
-                if (tail < 0x3e) {
+                if (tail + 2 != head) {
                     mem[0x400 + tail] = ch;
                     mem[0x401 + tail] = kbscan[ch];
-                    write16(&mem[0x41c], tail + 2);
+                    write16(&mem[0x41c], 0x1e + ((tail - 0x1c) & 0x1f));
                 }
             }
             return;
@@ -190,26 +191,22 @@ void bios(int n) {
             return;
         case 0x16: // keyboard
         {
+            int head = read16(&mem[0x41a]);
+            int tail = read16(&mem[0x41c]);
             switch (AH) {
                 case 0x00: // get keystroke
-                {
-                    int tail;
-                    while ((tail = read16(&mem[0x41c])) == 0x1e) {
+                    while (head == tail) {
                         bios(9);
+                        tail = read16(&mem[0x41c]);
                     }
-                    AX = read16(&mem[0x41e]);
-                    for (int i = 0x1e; i < tail - 2; i += 2) {
-                        uint8_t *p = &mem[0x400 + i];
-                        write16(p, read16(p + 2));
-                    }
-                    write16(&mem[0x41c], tail - 2);
+                    AX = read16(&mem[0x400 + head]);
+                    write16(&mem[0x41a], 0x1e + ((head - 0x1c) & 0x1f));
                     return;
-                }
                 case 0x01: // check for keystroke
-                    if ((ZF = read16(&mem[0x41c]) == 0x1e)) {
+                    if ((ZF = head == tail)) {
                         AX = 0; // empty
                     } else {
-                        AX = read16(&mem[0x41e]);
+                        AX = read16(&mem[0x400 + head]);
                     }
                     return;
             }

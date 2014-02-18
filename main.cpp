@@ -1392,7 +1392,7 @@ void step(uint8_t rep, SReg *seg) {
         case 0xd5: // aad
 #endif
     }
-    fprintf(stderr, "%04x:%04x %02x not implemented\n", *CS, p - &CS[0], b);
+    fprintf(stderr, "%04x:%04x %02x not implemented\n", *CS, int(p - &CS[0]), b);
     exit(1);
 }
 

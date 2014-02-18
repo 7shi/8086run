@@ -10,6 +10,9 @@
 
 #ifdef _WIN32
 #include <conio.h>
+
+void inittty() {
+}
 #else
 #include <termios.h>
 
@@ -28,6 +31,21 @@ int kbhit() {
     kbchar = getchar();
     fcntl(STDIN_FILENO, F_SETFL, f);
     return kbchar != EOF;
+}
+
+termios oldt;
+
+void inittty() {
+    termios t;
+    tcgetattr(STDIN_FILENO, &t);
+    termios oldt = t;
+    t.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &t);
+    if (!fork()) return;
+    int status;
+    wait(&status);
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    exit(status);
 }
 #endif
 
@@ -1390,12 +1408,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "can not open: %s\n", argv[1]);
         return 1;
     }
-#ifndef _WIN32
-    termios t;
-    tcgetattr(STDIN_FILENO, &t);
-    t.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &t);
-#endif
+    inittty();
 
     for (int i = 0; i < 256; ++i) {
         int n = 0;

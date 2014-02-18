@@ -22,9 +22,14 @@ void inittty() {
 int kbchar = EOF;
 
 int getch() {
-    if (kbchar == EOF) return getchar();
-    int ret = kbchar;
-    kbchar = EOF;
+    int ret;
+    if (kbchar == EOF) {
+        ret = getchar();
+    } else {
+        ret = kbchar;
+        kbchar = EOF;
+    }
+    if (ret == 10) ret = 13;
     return ret;
 }
 

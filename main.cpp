@@ -1473,7 +1473,7 @@ int main(int argc, char *argv[]) {
                 int t2 = (++pitc) * 225000 / 4096;
                 if (pitc == 4096) pitc = 0;
                 if (kbhit()) intr(9);
-                next += CLOCKS_PER_SEC / 1000 * (t2 - t1);
+                next += CLOCKS_PER_SEC * (t2 - t1) / 1000;
                 trial = 4;
             }
             counter = interval;

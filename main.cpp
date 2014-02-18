@@ -189,17 +189,24 @@ void bios(int n) {
             CF = 1;
             return;
         case 0x16: // keyboard
+        {
+            int tail = read16(&mem[0x41c]) - 2;
             switch (AH) {
                 case 0x00: // get keystroke
-                    // TODO
-                    break;
+                    if (tail < 0x1e) intr(9);
+                    AX = read16(&mem[0x400 + tail]);
+                    write16(&mem[0x41c], tail);
+                    return;
                 case 0x01: // check for keystroke
-                    // TODO
-                    ZF = 1;
-                    AX = 0;
+                    if ((ZF = tail < 0x1e)) {
+                        AX = 0; // empty
+                    } else {
+                        AX = read16(&mem[0x400 + tail]);
+                    }
                     return;
             }
             break;
+        }
         case 0x1a: // time
             switch (AH) {
                 case 0x00: // get system time

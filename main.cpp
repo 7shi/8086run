@@ -1364,7 +1364,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "usage: %s fdimage\n", argv[0]);
         return 1;
     }
-    if (!(fdimg = fopen(argv[1], "rb"))) {
+    if (!(fdimg = fopen(argv[1], "r+b"))) {
         fprintf(stderr, "can not open: %s\n", argv[1]);
         return 1;
     }

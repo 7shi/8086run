@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <time.h>
@@ -47,11 +48,11 @@ void inittty() {
     tcgetattr(STDIN_FILENO, &t);
     oldt = t;
 
-    sigaction sa;
+    struct sigaction sa;
     memset(&sa, 0, sizeof (sa));
     sa.sa_handler = resettty;
     sa.sa_flags = SA_RESTART;
-    sigaction(SIGINT, &sa_sigint, NULL);
+    sigaction(SIGINT, &sa, NULL);
 
     t.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &t);

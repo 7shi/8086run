@@ -1400,12 +1400,16 @@ int main(int argc, char *argv[]) {
     fread(&mem[IP], 1, 512, fdimg); // read MBR
     write16(&mem[0x41a], 0x1e); // keyboard queue head
     write16(&mem[0x41c], 0x1e); // keyboard queue tail
-    const int interval = 100000;
-    int counter = interval, pitc = 0;
+    int interval = 1 << 16, counter = interval, pitc = 0, trial = 4;
     clock_t next = clock();
     while (IP || *CS) {
         if (!--counter) {
             clock_t c = clock();
+            if (c <= next && !--trial) {
+                int old = interval;
+                if ((interval <<= 1) < old) interval = old;
+                trial = 4;
+            }
             while (c > next) {
                 intr(8);
                 // 3600/65536 = 225/4096
@@ -1414,6 +1418,7 @@ int main(int argc, char *argv[]) {
                 if (pitc == 4096) pitc = 0;
                 if (kbhit()) intr(9);
                 next += CLOCKS_PER_SEC / 1000 * (t2 - t1);
+                trial = 4;
             }
             counter = interval;
         }

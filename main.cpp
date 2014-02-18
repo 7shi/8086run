@@ -1361,10 +1361,11 @@ int main(int argc, char *argv[]) {
             clock_t c = clock();
             while (c > next) {
                 intr(8);
-                int t1 = CLOCKS_PER_SEC * pitc * 225 / 4096;
-                int t2 = CLOCKS_PER_SEC * (++pitc) * 225 / 4096;
+                // 3600/65536 = 225/4096
+                int t1 = pitc * 225000 / 4096;
+                int t2 = (++pitc) * 225000 / 4096;
                 if (pitc == 4096) pitc = 0;
-                next += t2 - t1;
+                next += CLOCKS_PER_SEC / 1000 * (t2 - t1);
             }
             counter = interval;
         }

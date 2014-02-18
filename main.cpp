@@ -8,41 +8,26 @@
 #include <fcntl.h>
 #include <time.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <conio.h>
 #else
 #include <termios.h>
 
 int kbchar = EOF;
 
-int getch(bool block) {
-    termios t;
-    tcgetattr(STDIN_FILENO, &t);
-    termios oldt = t;
-    t.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &t);
-    int ret;
-    if (block) {
-        ret = getchar();
-    } else {
-        int f = fcntl(STDIN_FILENO, F_GETFL, 0);
-        fcntl(STDIN_FILENO, F_SETFL, f | O_NONBLOCK);
-        ret = getchar();
-        fcntl(STDIN_FILENO, F_SETFL, f);
-    }
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    return ret;
-}
-
 int getch() {
-    if (kbchar == EOF) return getch(true);
+    if (kbchar == EOF) return getchar();
     int ret = kbchar;
     kbchar = EOF;
     return ret;
 }
 
 int kbhit() {
-    return (kbchar = getch(false)) != EOF;
+    int f = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, f | O_NONBLOCK);
+    kbchar = getchar();
+    fcntl(STDIN_FILENO, F_SETFL, f);
+    return kbchar != EOF;
 }
 #endif
 
@@ -1405,6 +1390,12 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "can not open: %s\n", argv[1]);
         return 1;
     }
+#ifndef _WIN32
+    termios t;
+    tcgetattr(STDIN_FILENO, &t);
+    t.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &t);
+#endif
 
     for (int i = 0; i < 256; ++i) {
         int n = 0;

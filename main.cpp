@@ -1136,6 +1136,27 @@ void step(uint8_t rep, SReg *seg) {
             IP += opr1.modrm(p, 1, seg) + 2;
             opr1 = read16(&CS[IP] - 2);
             return;
+        case 0xc8: // enter imm16, imm8 (80186)
+        {
+            IP += 4;
+            int lv = p[3];
+            push(BP);
+            uint16_t fp = SP;
+            if (lv > 0) {
+                for (int i = 1; i < lv; ++i) {
+                    push(read16(&SS[BP -= 2]));
+                }
+                push(fp);
+            }
+            BP = fp;
+            SP -= read16(p + 1);
+            return;
+        }
+        case 0xc9: // leave (80186)
+            ++IP;
+            SP = BP;
+            BP = pop();
+            return;
         case 0xca: // retf imm16
             IP = pop();
             CS = pop();

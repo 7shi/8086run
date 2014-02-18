@@ -14,6 +14,7 @@
 void inittty() {
 }
 #else
+#include <sys/wait.h>
 #include <termios.h>
 
 int kbchar = EOF;

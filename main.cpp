@@ -16,6 +16,7 @@ void inittty() {
 #else
 #include <sys/wait.h>
 #include <termios.h>
+#include <signal.h>
 
 int kbchar = EOF;
 
@@ -36,13 +37,26 @@ int kbhit() {
 
 termios oldt;
 
+void resettty(int) {
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    exit(1);
+}
+
 void inittty() {
     termios t;
     tcgetattr(STDIN_FILENO, &t);
-    termios oldt = t;
+    oldt = t;
+
+    sigaction sa;
+    memset(&sa, 0, sizeof (sa));
+    sa.sa_handler = resettty;
+    sa.sa_flags = SA_RESTART;
+    sigaction(SIGINT, &sa_sigint, NULL);
+
     t.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &t);
     if (!fork()) return;
+
     int status;
     wait(&status);
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);

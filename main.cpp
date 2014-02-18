@@ -190,18 +190,26 @@ void bios(int n) {
             return;
         case 0x16: // keyboard
         {
-            int tail = read16(&mem[0x41c]) - 2;
             switch (AH) {
                 case 0x00: // get keystroke
-                    if (tail < 0x1e) intr(9);
-                    AX = read16(&mem[0x400 + tail]);
-                    write16(&mem[0x41c], tail);
+                {
+                    int tail;
+                    while ((tail = read16(&mem[0x41c])) == 0x1e) {
+                        bios(9);
+                    }
+                    AX = read16(&mem[0x41e]);
+                    for (int i = 0x1e; i < tail - 2; i += 2) {
+                        uint8_t *p = &mem[0x400 + i];
+                        write16(p, read16(p + 2));
+                    }
+                    write16(&mem[0x41c], tail - 2);
                     return;
+                }
                 case 0x01: // check for keystroke
-                    if ((ZF = tail < 0x1e)) {
+                    if ((ZF = read16(&mem[0x41c]) == 0x1e)) {
                         AX = 0; // empty
                     } else {
-                        AX = read16(&mem[0x400 + tail]);
+                        AX = read16(&mem[0x41e]);
                     }
                     return;
             }

@@ -227,11 +227,8 @@ void bios(int n) {
                     }
                     int sect = disks[DL].s * (disks[DL].h * CH + DH) + CL - 1;
                     if (fseek(fdimg, sect << 9, SEEK_SET) < 0) {
-                        CF = 1; // error
-                        AH = 4; // sector
-                        return;
-                    }
-                    if (AH == 2) {
+                        memset(&ES[BX], 0, 512);
+                    } else if (AH == 2) {
                         fread(&ES[BX], 512, AL, fdimg);
                     } else {
                         fwrite(&ES[BX], 512, AL, fdimg);

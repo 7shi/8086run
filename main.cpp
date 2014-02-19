@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 
 #ifdef _WIN32
+#include <windows.h>
 #include <conio.h>
 
 void inittty() {
@@ -198,7 +199,31 @@ void bios(int n) {
             return;
         }
         case 0x10: // video
-            if (AH == 0x0e) write(STDOUT_FILENO, &AL, 1);
+            switch (AH) {
+                case 0x00:
+#ifdef _WIN32
+                    system("cls");
+#else
+                    printf("\x1b[H\x1b[J");
+                    fflush(stdout);
+#endif
+                    return;
+                case 0x02:
+                {
+#ifdef _WIN32
+                    HANDLE hStd = GetStdHandle(STD_OUTPUT_HANDLE);
+                    COORD pos = {DL, DH};
+                    SetConsoleCursorPosition(hStd, pos);
+#else
+                    printf("\x1b[%d;%dH", DH + 1, DL + 1);
+                    fflush(stdout);
+#endif
+                    return;
+                }
+                case 0x0e:
+                    write(STDOUT_FILENO, &AL, 1);
+                    return;
+            }
             return; // ignore
         case 0x11: // get equipment list
             AX = 0;

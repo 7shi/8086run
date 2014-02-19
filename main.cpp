@@ -771,7 +771,8 @@ void step(uint8_t rep, SReg *seg) {
         case 0x56:
         case 0x57:
             ++IP;
-            push(r[b & 7]);
+            SP -= 2;
+            write16(&SS[SP], r[b & 7]);
             return;
         case 0x58: // pop reg16
         case 0x59:

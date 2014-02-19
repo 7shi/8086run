@@ -1485,18 +1485,20 @@ int main(int argc, char *argv[]) {
 
     struct stat st;
     fstat(fileno(fdimg), &st);
-    disks[0].c = 80;
     int kb = st.st_size / 1024;
     if (kb == 360) {
-        disks[0].type = 1;
-        disks[0].h = 1;
+        disks[0].type = 1; // 2D
+        disks[0].c = 40;
+        disks[0].h = 2;
         disks[0].s = 9;
     } else if (kb == 720) {
-        disks[0].type = 3;
+        disks[0].type = 3; // 2DD
+        disks[0].c = 80;
         disks[0].h = 2;
         disks[0].s = 9;
     } else {
-        disks[0].type = 4;
+        disks[0].type = 4; // 2HD
+        disks[0].c = 80;
         disks[0].h = 2;
         disks[0].s = 18;
     }

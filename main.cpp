@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <time.h>
+#include <sys/stat.h>
 
 #ifdef _WIN32
 #include <conio.h>
@@ -160,6 +161,10 @@ uint8_t kbscan[] = {
     0x2d, 0x15, 0x2c, 0x1a, 0x2b, 0x1b, 0x29, 0x0e, // 78-7f
 };
 
+struct chs {
+    int c, h, s;
+} disks[1];
+
 void bios(int n) {
     void intr(int);
     switch (n) {
@@ -214,12 +219,13 @@ void bios(int n) {
                 case 0x02: // read sectors
                 case 0x03: // write sectors
                 {
-                    if (DH > 1 || CH > 79 || CL < 1 || CL > 18) {
+                    if (CH >= disks[DL].c || DH >= disks[DL].h
+                            || CL < 1 || CL > disks[DL].s) {
                         CF = 1; // error
                         AH = 4; // sector
                         return;
                     }
-                    int sect = 36 * CH + 18 * DH + CL - 1;
+                    int sect = disks[DL].s * (disks[DL].h * CH + DH) + CL - 1;
                     if (fseek(fdimg, sect << 9, SEEK_SET) < 0) {
                         CF = 1; // error
                         AH = 4; // sector
@@ -236,9 +242,9 @@ void bios(int n) {
                 case 0x08: // get drive params
                     AX = 0;
                     BL = 4; // 1440KB
-                    CH = 79;
-                    CL = 18;
-                    DH = 1;
+                    CH = disks[DL].c - 1;
+                    CL = disks[DL].s;
+                    DH = disks[DL].h - 1;
                     DL = 1;
                     ES = DI = 0;
                     CF = 0;
@@ -1477,6 +1483,21 @@ int main(int argc, char *argv[]) {
 
     for (int i = 0; i < 0x20; ++i) {
         write16(&mem[i << 2], i);
+    }
+
+    struct stat st;
+    fstat(fileno(fdimg), &st);
+    disks[0].c = 80;
+    int kb = st.st_size / 1024;
+    if (kb == 360) {
+        disks[0].h = 1;
+        disks[0].s = 9;
+    } else if (kb == 720) {
+        disks[0].h = 2;
+        disks[0].s = 9;
+    } else {
+        disks[0].h = 2;
+        disks[0].s = 18;
     }
 
     ES = CS = SS = DS = 0;

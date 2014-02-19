@@ -162,7 +162,7 @@ uint8_t kbscan[] = {
 };
 
 struct chs {
-    int c, h, s;
+    int type, c, h, s;
 } disks[1];
 
 void bios(int n) {
@@ -238,7 +238,7 @@ void bios(int n) {
                 }
                 case 0x08: // get drive params
                     AX = 0;
-                    BL = 4; // 1440KB
+                    BL = disks[DL].type;
                     CH = disks[DL].c - 1;
                     CL = disks[DL].s;
                     DH = disks[DL].h - 1;
@@ -1487,12 +1487,15 @@ int main(int argc, char *argv[]) {
     disks[0].c = 80;
     int kb = st.st_size / 1024;
     if (kb == 360) {
+        disks[0].type = 1;
         disks[0].h = 1;
         disks[0].s = 9;
     } else if (kb == 720) {
+        disks[0].type = 3;
         disks[0].h = 2;
         disks[0].s = 9;
     } else {
+        disks[0].type = 4;
         disks[0].h = 2;
         disks[0].s = 18;
     }

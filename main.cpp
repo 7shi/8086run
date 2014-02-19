@@ -62,10 +62,11 @@ void inittty() {
     tcsetattr(STDIN_FILENO, TCSANOW, &t);
     if (!fork()) return;
 
-    int status;
-    wait(&status);
+    int st;
+    wait(&st);
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    exit(status);
+    if (WIFEXITED(st)) exit(WEXITSTATUS(st));
+    exit(1);
 }
 #endif
 

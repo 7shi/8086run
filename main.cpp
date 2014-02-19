@@ -1139,7 +1139,7 @@ void step(uint8_t rep, SReg *seg) {
         case 0xc8: // enter imm16, imm8 (80186)
         {
             IP += 4;
-            int lv = p[3];
+            int lv = p[3] & 31;
             push(BP);
             uint16_t fp = SP;
             if (lv > 0) {

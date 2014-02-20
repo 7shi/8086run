@@ -548,15 +548,15 @@ inline uint16_t getf() {
 }
 
 inline void setf(uint16_t flags) {
-    OF = flags & 2048;
-    DF = flags & 1024;
-    IF = flags & 512;
-    TF = flags & 256;
-    SF = flags & 128;
-    ZF = flags & 64;
-    AF = flags & 16;
-    PF = flags & 4;
-    CF = flags & 1;
+    CF = flags & 0x001;
+    PF = flags & 0x004;
+    AF = flags & 0x010;
+    ZF = flags & 0x040;
+    SF = flags & 0x080;
+    TF = flags & 0x100;
+    IF = flags & 0x200;
+    DF = flags & 0x400;
+    OF = flags & 0x800;
 }
 
 inline void jumpif(int8_t offset, bool c) {

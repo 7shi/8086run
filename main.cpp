@@ -77,7 +77,7 @@ uint8_t mem[0x110000], io[0x10000];
 uint16_t IP, r[8];
 uint8_t *r8[8];
 bool OF, DF, IF, TF, SF, ZF, AF, PF, CF;
-bool ptable[256];
+bool ptable[256], hltend;
 
 FILE *fdimg;
 
@@ -1306,6 +1306,7 @@ void step(uint8_t rep, SReg *seg) {
             if (CX) step(b, seg);
             return;
         case 0xf4: // hlt
+            if (hltend) exit(0);
             ++IP;
             return;
         case 0xf5: // cmc
@@ -1485,6 +1486,11 @@ void step(uint8_t rep, SReg *seg) {
 
 int main(int argc, char *argv[]) {
     inittty();
+    if (argc > 1 && !strcmp(argv[1], "-hlt")) {
+        hltend = true;
+        --argc;
+        ++argv;
+    }
     if (argc != 2) {
         fprintf(stderr, "usage: %s fdimage\n", argv[0]);
         return 1;

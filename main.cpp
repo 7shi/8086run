@@ -24,9 +24,9 @@ void inittty() {
 int kbchar = EOF;
 
 int getch() {
-    int ret;
+    char ret;
     if (kbchar == EOF) {
-        ret = getchar();
+        if (read(STDIN_FILENO, &ret, 1) < 1) return EOF;
     } else {
         ret = kbchar;
         kbchar = EOF;
@@ -38,7 +38,8 @@ int getch() {
 int kbhit() {
     int f = fcntl(STDIN_FILENO, F_GETFL, 0);
     fcntl(STDIN_FILENO, F_SETFL, f | O_NONBLOCK);
-    kbchar = getchar();
+    char ch;
+    kbchar = read(STDIN_FILENO, &ch, 1) < 1 ? EOF : ch;
     fcntl(STDIN_FILENO, F_SETFL, f);
     return kbchar != EOF;
 }

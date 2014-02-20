@@ -958,6 +958,8 @@ void step(uint8_t rep, SReg *seg) {
             CS = read16(p + 3);
             IP = read16(p + 1);
             return;
+        case 0x9b: // wait
+            return; // ignore
         case 0x9c: // pushf
             ++IP;
             return push(getf());
@@ -1461,7 +1463,6 @@ void step(uint8_t rep, SReg *seg) {
         case 0x2f: // das
         case 0x37: // aaa
         case 0x3f: // aas
-        case 0x9b: // wait
         case 0xd4: // aam
         case 0xd5: // aad
 #endif

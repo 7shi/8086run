@@ -203,19 +203,19 @@ void bios(int n) {
             return;
         }
         case 0x09: // keyboard
-        {
-            uint8_t ch = getch();
-            if (ch < 128 && kbscan[ch]) {
-                int head = read16(&mem[0x41a]);
-                int tail = read16(&mem[0x41c]);
-                if (tail + 2 != head) {
-                    mem[0x400 + tail] = ch;
-                    mem[0x401 + tail] = kbscan[ch];
-                    write16(&mem[0x41c], 0x1e + ((tail - 0x1c) & 0x1f));
+            do {
+                uint8_t ch = getch();
+                if (ch < 128 && kbscan[ch]) {
+                    int head = read16(&mem[0x41a]);
+                    int tail = read16(&mem[0x41c]);
+                    if (tail + 2 != head) {
+                        mem[0x400 + tail] = ch;
+                        mem[0x401 + tail] = kbscan[ch];
+                        write16(&mem[0x41c], 0x1e + ((tail - 0x1c) & 0x1f));
+                    }
                 }
-            }
+            } while (kbhit());
             return;
-        }
         case 0x10: // video
             switch (AH) {
                 case 0x00:

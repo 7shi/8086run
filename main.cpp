@@ -278,6 +278,14 @@ void bios(int n) {
             }
             CF = 1;
             return;
+        case 0x15: // system
+            switch (AH) {
+                case 0x88: // get extended memory size
+                    CF = 0;
+                    AX = 0;
+                    return;
+            }
+            break;
         case 0x16: // keyboard
         {
             int head = read16(&mem[0x41a]);

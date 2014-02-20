@@ -77,7 +77,7 @@ uint8_t mem[0x110000], io[0x10000];
 uint16_t IP, r[8];
 uint8_t *r8[8];
 bool OF, DF, IF, TF, SF, ZF, AF, PF, CF;
-bool ptable[256], hltend;
+bool ptable[256], hltend, cleared;
 
 FILE *fdimg;
 
@@ -208,6 +208,7 @@ void bios(int n) {
                     printf("\x1b[H\x1b[J");
                     fflush(stdout);
 #endif
+                    cleared = true;
                     return;
                 case 0x02:
                 {
@@ -1306,7 +1307,15 @@ void step(uint8_t rep, SReg *seg) {
             if (CX) step(b, seg);
             return;
         case 0xf4: // hlt
-            if (hltend) exit(0);
+            if (hltend) {
+                if (cleared) {
+                    AH = 2, DL = 79, DH = 24;
+                    bios(0x10);
+                    AX = 0x0e0d;
+                    bios(0x10);
+                }
+                exit(0);
+            }
             ++IP;
             return;
         case 0xf5: // cmc

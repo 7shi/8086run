@@ -1297,6 +1297,8 @@ void step(uint8_t rep, SReg *seg) {
             ++IP;
             write16(io + DX, AX);
             return;
+        case 0xf0: // lock
+            return; // ignore
         case 0xf2: // repnz/repne
         case 0xf3: // rep/repz/repe
             ++IP;

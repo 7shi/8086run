@@ -182,7 +182,7 @@ struct Disk {
         }
         return true;
     }
-} disks[1];
+} disks[2];
 
 void bios(int n) {
     void intr(int);
@@ -245,14 +245,14 @@ void bios(int n) {
             }
             return; // ignore
         case 0x11: // get equipment list
-            AX = 0;
+            AX = disks[1].f ? 0x41 : 1;
             return;
         case 0x12: // get memory size
             AX = 640;
             return;
         case 0x13: // disk
         {
-            if (DL != 0) { // not first fdd
+            if (DL > 1 || !disks[DL].f) {
                 CF = 1; // error
                 AH = 1; // invalid
                 return;
@@ -1520,13 +1520,15 @@ int main(int argc, char *argv[]) {
         --argc;
         ++argv;
     }
-    if (argc != 2) {
-        fprintf(stderr, "usage: %s fdimage\n", argv[0]);
+    if (argc < 2 || 3 < argc) {
+        fprintf(stderr, "usage: %s fd1image [fd2image]\n", argv[0]);
         return 1;
     }
-    if (!disks[0].open(argv[1])) {
-        fprintf(stderr, "can not open: %s\n", argv[1]);
-        return 1;
+    for (int i = 1; i < argc; ++i) {
+        if (!disks[i - 1].open(argv[i])) {
+            fprintf(stderr, "can not open: %s\n", argv[i]);
+            return 1;
+        }
     }
 
     for (int i = 0; i < 256; ++i) {

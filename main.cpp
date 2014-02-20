@@ -164,6 +164,24 @@ uint8_t kbscan[] = {
 struct Disk {
     FILE *f;
     int type, c, h, s;
+
+    bool open(const char *img) {
+        if (!(f = fopen(img, "r+b"))) return false;
+        struct stat st;
+        fstat(fileno(f), &st);
+        switch (st.st_size / 1024) {
+            case 360: // 2D
+                type = 1, c = 40, h = 2, s = 9;
+                break;
+            case 720: // 2DD
+                type = 3, c = 80, h = 2, s = 9;
+                break;
+            default: // 2HD
+                type = 4, c = 80, h = 2, s = 18;
+                break;
+        }
+        return true;
+    }
 } disks[1];
 
 void bios(int n) {
@@ -1506,7 +1524,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "usage: %s fdimage\n", argv[0]);
         return 1;
     }
-    if (!(disks[0].f = fopen(argv[1], "r+b"))) {
+    if (!disks[0].open(argv[1])) {
         fprintf(stderr, "can not open: %s\n", argv[1]);
         return 1;
     }
@@ -1535,26 +1553,6 @@ int main(int argc, char *argv[]) {
 
     for (int i = 0; i < 0x20; ++i) {
         write16(&mem[i << 2], i);
-    }
-
-    struct stat st;
-    fstat(fileno(disks[0].f), &st);
-    int kb = st.st_size / 1024;
-    if (kb == 360) {
-        disks[0].type = 1; // 2D
-        disks[0].c = 40;
-        disks[0].h = 2;
-        disks[0].s = 9;
-    } else if (kb == 720) {
-        disks[0].type = 3; // 2DD
-        disks[0].c = 80;
-        disks[0].h = 2;
-        disks[0].s = 9;
-    } else {
-        disks[0].type = 4; // 2HD
-        disks[0].c = 80;
-        disks[0].h = 2;
-        disks[0].s = 18;
     }
 
     ES = CS = SS = DS = 0;

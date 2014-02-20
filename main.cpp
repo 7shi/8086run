@@ -79,8 +79,6 @@ uint8_t *r8[8];
 bool OF, DF, IF, TF, SF, ZF, AF, PF, CF;
 bool ptable[256], hltend, cleared;
 
-FILE *fdimg;
-
 #define AX r[0]
 #define CX r[1]
 #define DX r[2]
@@ -163,7 +161,8 @@ uint8_t kbscan[] = {
     0x2d, 0x15, 0x2c, 0x1a, 0x2b, 0x1b, 0x29, 0x0e, // 78-7f
 };
 
-struct chs {
+struct Disk {
+    FILE *f;
     int type, c, h, s;
 } disks[1];
 
@@ -234,11 +233,13 @@ void bios(int n) {
             AX = 640;
             return;
         case 0x13: // disk
+        {
             if (DL != 0) { // not first fdd
                 CF = 1; // error
                 AH = 1; // invalid
                 return;
             }
+            Disk *d = &disks[DL];
             switch (AH) {
                 case 0x00: // reset disk system
                     CF = 0;
@@ -246,29 +247,29 @@ void bios(int n) {
                 case 0x02: // read sectors
                 case 0x03: // write sectors
                 {
-                    if (CH >= disks[DL].c || DH >= disks[DL].h
-                            || CL < 1 || CL > disks[DL].s) {
+                    if (CH >= d->c || DH >= d->h
+                            || CL < 1 || CL > d->s) {
                         CF = 1; // error
                         AH = 4; // sector
                         return;
                     }
-                    int sect = disks[DL].s * (disks[DL].h * CH + DH) + CL - 1;
-                    if (fseek(fdimg, sect << 9, SEEK_SET) < 0) {
+                    int sect = d->s * (d->h * CH + DH) + CL - 1;
+                    if (fseek(d->f, sect << 9, SEEK_SET) < 0) {
                         memset(&ES[BX], 0, 512);
                     } else if (AH == 2) {
-                        fread(&ES[BX], 512, AL, fdimg);
+                        fread(&ES[BX], 512, AL, d->f);
                     } else {
-                        fwrite(&ES[BX], 512, AL, fdimg);
+                        fwrite(&ES[BX], 512, AL, d->f);
                     }
                     CF = 0;
                     return;
                 }
                 case 0x08: // get drive params
                     AX = 0;
-                    BL = disks[DL].type;
-                    CH = disks[DL].c - 1;
-                    CL = disks[DL].s;
-                    DH = disks[DL].h - 1;
+                    BL = d->type;
+                    CH = d->c - 1;
+                    CL = d->s;
+                    DH = d->h - 1;
                     DL = 1;
                     ES = DI = 0;
                     CF = 0;
@@ -280,6 +281,7 @@ void bios(int n) {
             }
             CF = 1;
             return;
+        }
         case 0x15: // system
             switch (AH) {
                 case 0x88: // get extended memory size
@@ -1504,7 +1506,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "usage: %s fdimage\n", argv[0]);
         return 1;
     }
-    if (!(fdimg = fopen(argv[1], "r+b"))) {
+    if (!(disks[0].f = fopen(argv[1], "r+b"))) {
         fprintf(stderr, "can not open: %s\n", argv[1]);
         return 1;
     }
@@ -1536,7 +1538,7 @@ int main(int argc, char *argv[]) {
     }
 
     struct stat st;
-    fstat(fileno(fdimg), &st);
+    fstat(fileno(disks[0].f), &st);
     int kb = st.st_size / 1024;
     if (kb == 360) {
         disks[0].type = 1; // 2D
@@ -1557,7 +1559,7 @@ int main(int argc, char *argv[]) {
 
     ES = CS = SS = DS = 0;
     IP = 0x7c00;
-    fread(&mem[IP], 1, 512, fdimg); // read MBR
+    fread(&mem[IP], 1, 512, disks[0].f); // read MBR
     write16(&mem[0x41a], 0x1e); // keyboard queue head
     write16(&mem[0x41c], 0x1e); // keyboard queue tail
     int interval = 1 << 16, counter = interval, pitc = 0, trial = 4;

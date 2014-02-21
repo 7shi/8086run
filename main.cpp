@@ -121,25 +121,27 @@ struct SReg {
 #define DS sr[3]
 
 void
-debug(FILE *f) {
+debug(FILE *f, bool h) {
+    if (h) fprintf(f, " AX   BX   CX   DX   SP   BP   SI   DI    FLAGS    ES   SS   DS   CS   IP  dump\n");
     fprintf(f,
-            "%04x %04x %04x %04x-%04x %04x %04x %04x %c%c%c%c%c%c%c%c%c %04x %04x %04x %04x:%04x %02x%02x%02x\n",
+            "%04x %04x %04x %04x-%04x %04x %04x %04x %c%c%c%c%c%c%c%c%c %04x %04x %04x %04x:%04x %02x%02x\n",
             AX, BX, CX, DX, SP, BP, SI, DI,
             "-O"[OF], "-D"[DF], "-I"[IF], "-T"[TF], "-S"[SF], "-Z"[ZF], "-A"[AF], "-P"[PF], "-C"[CF],
-            *ES, *SS, *DS, *CS, IP, CS[IP], CS[IP + 1], CS[IP + 2]);
+            *ES, *SS, *DS, *CS, IP, CS[IP], CS[IP + 1]);
 }
 
 void dump(FILE *f, SReg *seg, uint16_t addr, int len) {
-    fprintf(f, "org 0x%04x ; %04x:%04x\n", addr, seg->v, addr);
+    fprintf(f, "org 0x%04x:0x%04x\n", seg->v, addr);
     for (int i = 0; i < len; ++i) {
         if (i & 7) {
             fprintf(f, ", ");
         } else {
-            if (i > 0)fprintf(f, "\n");
+            if (i > 0) fprintf(f, "\n");
             fprintf(f, "db ");
         }
         fprintf(f, "0x%02x", (*seg)[addr + i]);
     }
+    fprintf(f, "\n");
 }
 
 inline uint16_t read16(uint8_t *p) {
@@ -395,7 +397,7 @@ void bios(int n) {
             return;
     }
     dump(stderr, &CS, IP - 0x18, 0x30);
-    debug(stderr);
+    debug(stderr, true);
     fprintf(stderr, "not implemented: int %02x,%02x\n", n, AH);
     exit(1);
 }
@@ -1527,7 +1529,7 @@ void step(uint8_t rep, SReg *seg) {
     }
     IP = p - &CS[0];
     dump(stderr, &CS, IP - 0x18, 0x30);
-    debug(stderr);
+    debug(stderr, true);
     fprintf(stderr, "not implemented: %02x%02x%02x\n", b, p[1], p[2]);
     exit(1);
 }

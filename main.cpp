@@ -184,6 +184,14 @@ struct Disk {
     }
 } disks[2];
 
+void out(uint16_t n, uint8_t v) {
+    io[n] = v;
+}
+
+uint8_t in(uint16_t n) {
+    return io[n];
+}
+
 void bios(int n) {
     void intr(int);
     switch (n) {
@@ -1274,20 +1282,16 @@ void step(uint8_t rep, SReg *seg) {
         case 0xe3: // jcxz
             return jumpif(p[1], CX == 0);
         case 0xe4: // in al, imm8
-            IP += 2;
-            AL = io[p[1]];
-            return;
         case 0xe5: // in ax, imm8
             IP += 2;
-            AX = read16(io + p[1]);
+            AL = in(p[1]);
+            if (b & 1) AH = in(p[1] + 1);
             return;
         case 0xe6: // out imm8, al
-            IP += 2;
-            io[p[1]] = AL;
-            return;
         case 0xe7: // out imm8, ax
             IP += 2;
-            write16(io + p[1], AX);
+            out(p[1], AL);
+            if (b & 1) out(p[1] + 1, AH);
             return;
         case 0xe8: // call disp
             push(IP + 3);
@@ -1304,20 +1308,16 @@ void step(uint8_t rep, SReg *seg) {
             IP += 2 + (int8_t) p[1];
             return;
         case 0xec: // in al, dx
-            ++IP;
-            AL = io[DX];
-            return;
         case 0xed: // in ax, dx
             ++IP;
-            AX = read16(io + DX);
+            AL = in(DX);
+            if (b & 1) AH = in(DX + 1);
             return;
         case 0xee: // out dx, al
-            ++IP;
-            io[DX] = AL;
-            return;
         case 0xef: // out dx, ax
             ++IP;
-            write16(io + DX, AX);
+            out(DX, AL);
+            if (b & 1) out(DX + 1, AH);
             return;
         case 0xf0: // lock
             return; // ignore

@@ -394,7 +394,9 @@ void bios(int n) {
         case 0x1c: // timer handler
             return;
     }
-    fprintf(stderr, "%04x:%04x int %02x,%02x not implemented\n", *CS, IP, n, AH);
+    dump(stderr, &CS, IP - 0x18, 0x30);
+    debug(stderr);
+    fprintf(stderr, "not implemented: int %02x,%02x\n", n, AH);
     exit(1);
 }
 
@@ -1523,8 +1525,10 @@ void step(uint8_t rep, SReg *seg) {
         case 0xd5: // aad
 #endif
     }
-    fprintf(stderr, "%04x:%04x %02x%02x%02x not implemented\n",
-            *CS, int(p - &CS[0]), b, p[1], p[2]);
+    IP = p - &CS[0];
+    dump(stderr, &CS, IP - 0x18, 0x30);
+    debug(stderr);
+    fprintf(stderr, "not implemented: %02x%02x%02x\n", b, p[1], p[2]);
     exit(1);
 }
 

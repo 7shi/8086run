@@ -198,10 +198,12 @@ struct Disk {
 } disks[2];
 
 void out(uint16_t n, uint8_t v) {
+    //printf("[out %04x, %02x]\n", n, v), fflush(stdout);
     io[n] = v;
 }
 
 uint8_t in(uint16_t n) {
+    //printf("[in %04x]\n", n), fflush(stdout);
     return io[n];
 }
 

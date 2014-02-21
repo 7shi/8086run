@@ -206,6 +206,11 @@ void out(uint16_t n, uint8_t v) {
 
 uint8_t in(uint16_t n) {
     //printf("[in %04x]\n", n), fflush(stdout);
+    switch (n) {
+        case 0x03da: // 6845 - status register
+            io[n] = !io[n];
+            break;
+    }
     return io[n];
 }
 

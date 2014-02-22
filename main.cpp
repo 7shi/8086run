@@ -677,25 +677,25 @@ inline void shift(Operand *opr, int c, uint8_t *p) {
         case 4: // shl/sal
             if (c > 0) {
                 val <<= c;
+                *opr = opr->setf(val);
                 CF = val & (m << 1);
                 OF = CF != bool(val & m);
-                *opr = opr->setf(val);
             }
             break;
         case 5: // shr
             if (c > 0) {
                 val >>= c - 1;
+                *opr = opr->setf(val >> 1);
                 CF = val & 1;
                 OF = val & m;
-                *opr = opr->setf(val >> 1);
             }
             break;
         case 7: // sar
             if (c > 0) {
                 val = int8_t(val) >> (c - 1);
+                *opr = opr->setf(val >> 1);
                 CF = val & 1;
                 OF = false;
-                *opr = opr->setf(val >> 1);
             }
             break;
     }

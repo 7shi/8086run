@@ -1053,6 +1053,7 @@ void step(uint8_t rep, SReg *seg) {
             return;
         case 0xa4: // movsb
             ++IP;
+            if (rep && !CX) return;
             if (!seg) seg = &DS;
             do {
                 ES[DI] = (*seg)[SI];
@@ -1063,11 +1064,11 @@ void step(uint8_t rep, SReg *seg) {
                     SI++;
                     DI++;
                 }
-                if (rep) CX--;
-            } while ((rep == 0xf2 || rep == 0xf3) && CX);
+            } while (rep && --CX);
             return;
         case 0xa5: // movsw
             ++IP;
+            if (rep && !CX) return;
             if (!seg) seg = &DS;
             do {
                 write16(&ES[DI], read16(&(*seg)[SI]));
@@ -1078,11 +1079,11 @@ void step(uint8_t rep, SReg *seg) {
                     SI += 2;
                     DI += 2;
                 }
-                if (rep) CX--;
-            } while ((rep == 0xf2 || rep == 0xf3) && CX);
+            } while (rep && --CX);
             return;
         case 0xa6: // cmpsb
             ++IP;
+            if (rep && !CX) return;
             if (!seg) seg = &DS;
             do {
                 val = int8_t(dst = (*seg)[SI]) - int8_t(src = ES[DI]);
@@ -1095,11 +1096,11 @@ void step(uint8_t rep, SReg *seg) {
                     SI++;
                     DI++;
                 }
-                if (rep) CX--;
-            } while (((rep == 0xf2 && !ZF) || (rep == 0xf3 && ZF)) && CX);
+            } while (rep && --CX && ((rep == 0xf2 && !ZF) || (rep == 0xf3 && ZF)));
             return;
         case 0xa7: // cmpsw
             ++IP;
+            if (rep && !CX) return;
             if (!seg) seg = &DS;
             do {
                 val = int16_t(dst = read16(&(*seg)[SI])) - int16_t(src = read16(&ES[DI]));
@@ -1112,8 +1113,7 @@ void step(uint8_t rep, SReg *seg) {
                     SI += 2;
                     DI += 2;
                 }
-                if (rep) CX--;
-            } while (((rep == 0xf2 && !ZF) || (rep == 0xf3 && ZF)) && CX);
+            } while (rep && --CX && ((rep == 0xf2 && !ZF) || (rep == 0xf3 && ZF)));
             return;
         case 0xa8: // test al, imm8
         case 0xa9: // test ax, imm16
@@ -1123,63 +1123,63 @@ void step(uint8_t rep, SReg *seg) {
             return;
         case 0xaa: // stosb
             ++IP;
+            if (rep && !CX) return;
             do {
                 ES[DI] = AL;
                 if (DF) DI--;
                 else DI++;
-                if (rep) CX--;
-            } while ((rep == 0xf2 || rep == 0xf3) && CX);
+            } while (rep && --CX);
             return;
         case 0xab: // stosw
             ++IP;
+            if (rep && !CX) return;
             do {
                 write16(&ES[DI], AX);
                 if (DF) DI -= 2;
                 else DI += 2;
-                if (rep) CX--;
-            } while ((rep == 0xf2 || rep == 0xf3) && CX);
+            } while (rep && --CX);
             return;
         case 0xac: // lodsb
             ++IP;
+            if (rep && !CX) return;
             if (!seg) seg = &DS;
             do {
                 AL = (*seg)[SI];
                 if (DF) SI--;
                 else SI++;
-                if (rep) CX--;
-            } while ((rep == 0xf2 || rep == 0xf3) && CX);
+            } while (rep && --CX);
             return;
         case 0xad: // lodsw
             ++IP;
+            if (rep && !CX) return;
             if (!seg) seg = &DS;
             do {
                 AX = read16(&(*seg)[SI]);
                 if (DF) SI -= 2;
                 else SI += 2;
-                if (rep) CX--;
-            } while ((rep == 0xf2 || rep == 0xf3) && CX);
+            } while (rep && --CX);
             return;
         case 0xae: // scasb
             ++IP;
+            if (rep && !CX) return;
             do {
                 val = int8_t(AL) - int8_t(src = ES[DI]);
                 CF = AL < src;
                 setf8(val);
                 if (DF) DI--;
                 else DI++;
-                if (rep) CX--;
-            } while (((rep == 0xf2 && !ZF) || (rep == 0xf3 && ZF)) && CX);
+            } while (rep && --CX && ((rep == 0xf2 && !ZF) || (rep == 0xf3 && ZF)));
             return;
         case 0xaf: // scasw
             ++IP;
+            if (rep && !CX) return;
             do {
                 val = int16_t(AX) - int16_t(src = read16(&ES[DI]));
                 CF = AX < src;
                 setf16(val);
                 if (DF) DI -= 2;
                 else DI += 2;
-                if (rep) CX--;
-            } while (((rep == 0xf2 && !ZF) || (rep == 0xf3 && ZF)) && CX);
+            } while (rep && --CX && ((rep == 0xf2 && !ZF) || (rep == 0xf3 && ZF)));
             return;
         case 0xb0: // mov reg8, imm8
         case 0xb1:
@@ -1348,7 +1348,7 @@ void step(uint8_t rep, SReg *seg) {
         case 0xf2: // repnz/repne
         case 0xf3: // rep/repz/repe
             ++IP;
-            if (CX) step(b, seg);
+            step(b, seg);
             return;
         case 0xf4: // hlt
             if (hltend) {

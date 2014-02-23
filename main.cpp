@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -74,7 +75,7 @@ void inittty() {
 #endif
 
 uint8_t mem[0x110000], io[0x10000];
-uint16_t IP, r[8];
+uint16_t IP, oldip, r[8];
 uint8_t *r8[8];
 bool OF, DF, IF, TF, SF, ZF, AF, PF, CF;
 bool ptable[256], hltend, cleared;
@@ -199,10 +200,18 @@ struct Disk {
     }
 } disks[2];
 
-void out(uint16_t n, uint8_t v) {
+void error(const char *fmt, ...) {
+    IP = oldip;
     dump(stderr, &CS, IP - 0x18, 0x30);
     debug(stderr, true);
-    fprintf(stderr, "not implemented: out %04x,%02x\n", n, v);
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+}
+
+void out(uint16_t n, uint8_t v) {
+    error("not implemented: out %04x,%02x\n", n, v);
     exit(1);
 }
 
@@ -211,9 +220,7 @@ uint8_t in(uint16_t n) {
         case 0x03da: // 6845 - status register
             return io[n] = !io[n];
     }
-    dump(stderr, &CS, IP - 0x18, 0x30);
-    debug(stderr, true);
-    fprintf(stderr, "not implemented: in %04x\n", n);
+    error("not implemented: in %04x\n", n);
     exit(1);
 }
 
@@ -404,9 +411,7 @@ void bios(int n) {
         case 0x1c: // timer handler
             return;
     }
-    dump(stderr, &CS, IP - 0x18, 0x30);
-    debug(stderr, true);
-    fprintf(stderr, "not implemented: int %02x,%02x\n", n, AH);
+    error("not implemented: int %02x,%02x\n", n, AH);
     exit(1);
 }
 
@@ -1535,10 +1540,7 @@ void step(uint8_t rep, SReg *seg) {
         case 0xd5: // aad
 #endif
     }
-    IP = p - &CS[0];
-    dump(stderr, &CS, IP - 0x18, 0x30);
-    debug(stderr, true);
-    fprintf(stderr, "not implemented: %02x%02x%02x\n", b, p[1], p[2]);
+    error("not implemented: %02x%02x%02x\n", b, p[1], p[2]);
     exit(1);
 }
 
@@ -1613,6 +1615,7 @@ int main(int argc, char *argv[]) {
             }
             counter = interval;
         }
+        oldip = IP;
         step(0, NULL);
     }
 }

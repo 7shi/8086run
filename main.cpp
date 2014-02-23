@@ -217,7 +217,11 @@ void out(uint16_t n, uint8_t v) {
 
 uint8_t in(uint16_t n) {
     switch (n) {
-        case 0x03da: // 6845 - status register
+        case 0x0021: // PIC 8259 (master) - IMR
+            break;
+        case 0x00a1: // PIC 8259 (slave) - IMR
+            break;
+        case 0x03da: // CRTC 6845 - status register
             return io[n] = !io[n];
         default:
             error("not implemented: in %04x\n", n);

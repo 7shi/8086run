@@ -208,20 +208,21 @@ void error(const char *fmt, ...) {
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
     va_end(ap);
+    exit(1);
 }
 
 void out(uint16_t n, uint8_t v) {
     error("not implemented: out %04x,%02x\n", n, v);
-    exit(1);
 }
 
 uint8_t in(uint16_t n) {
     switch (n) {
         case 0x03da: // 6845 - status register
             return io[n] = !io[n];
+        default:
+            error("not implemented: in %04x\n", n);
     }
-    error("not implemented: in %04x\n", n);
-    exit(1);
+    return io[n];
 }
 
 void bios(int n) {
@@ -412,7 +413,6 @@ void bios(int n) {
             return;
     }
     error("not implemented: int %02x,%02x\n", n, AH);
-    exit(1);
 }
 
 inline int setf8(int value) {
@@ -1541,7 +1541,6 @@ void step(uint8_t rep, SReg *seg) {
 #endif
     }
     error("not implemented: %02x%02x%02x\n", b, p[1], p[2]);
-    exit(1);
 }
 
 int main(int argc, char *argv[]) {

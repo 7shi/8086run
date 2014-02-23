@@ -200,18 +200,21 @@ struct Disk {
 } disks[2];
 
 void out(uint16_t n, uint8_t v) {
-    //printf("[out %04x, %02x]\n", n, v), fflush(stdout);
-    io[n] = v;
+    dump(stderr, &CS, IP - 0x18, 0x30);
+    debug(stderr, true);
+    fprintf(stderr, "not implemented: out %04x,%02x\n", n, v);
+    exit(1);
 }
 
 uint8_t in(uint16_t n) {
-    //printf("[in %04x]\n", n), fflush(stdout);
     switch (n) {
         case 0x03da: // 6845 - status register
-            io[n] = !io[n];
-            break;
+            return io[n] = !io[n];
     }
-    return io[n];
+    dump(stderr, &CS, IP - 0x18, 0x30);
+    debug(stderr, true);
+    fprintf(stderr, "not implemented: in %04x\n", n);
+    exit(1);
 }
 
 void bios(int n) {

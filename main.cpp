@@ -330,21 +330,20 @@ void bios(int n) {
             }
             Disk *d = &disks[DL];
             int c = CH | ((CL & 0xc0) << 2), s = (CL & 0x3f) - 1;
+            int lba = d->s * (d->h * c + DH) + s;
             switch (AH) {
                 case 0x00: // reset disk system
                     CF = 0;
                     return;
                 case 0x02: // read sectors
                 case 0x03: // write sectors
-                {
                     if (c >= d->c || DH >= d->h
                             || s < 0 || s >= d->s) {
                         CF = 1; // error
                         AH = 4; // sector
                         return;
                     }
-                    int sect = d->s * (d->h * c + DH) + s;
-                    if (fseek(d->f, sect << 9, SEEK_SET) < 0) {
+                    if (fseek(d->f, lba << 9, SEEK_SET) < 0) {
                         memset(&ES[BX], 0, 512);
                     } else if (AH == 2) {
                         fread(&ES[BX], 512, AL, d->f);
@@ -353,7 +352,6 @@ void bios(int n) {
                     }
                     CF = 0;
                     return;
-                }
                 case 0x08: // get drive params
                     AX = 0;
                     BL = d->type;

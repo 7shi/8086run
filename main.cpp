@@ -333,7 +333,7 @@ void bios(int n) {
             int lba = d->s * (d->h * c + DH) + s;
             switch (AH) {
                 case 0x00: // reset disk system
-                    CF = 0;
+                    AH = CF = 0;
                     return;
                 case 0x02: // read sectors
                 case 0x03: // write sectors
@@ -351,7 +351,7 @@ void bios(int n) {
                     } else {
                         fwrite(&ES[BX], 512, AL, d->f);
                     }
-                    CF = 0;
+                    AH = CF = 0;
                     return;
                 case 0x08: // get drive params
                     AX = 0;

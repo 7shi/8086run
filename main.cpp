@@ -343,10 +343,11 @@ void bios(int n) {
                         AH = 4; // sector
                         return;
                     }
-                    if (fseek(d->f, lba << 9, SEEK_SET) < 0) {
-                        memset(&ES[BX], 0, 512);
-                    } else if (AH == 2) {
-                        fread(&ES[BX], 512, AL, d->f);
+                    fseek(d->f, lba << 9, SEEK_SET);
+                    if (AH == 2) {
+                        if (fread(&ES[BX], 512, AL, d->f) < 1) {
+                            memset(&ES[BX], 0, 512);
+                        }
                     } else {
                         fwrite(&ES[BX], 512, AL, d->f);
                     }

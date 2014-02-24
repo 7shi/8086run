@@ -257,6 +257,7 @@ uint8_t in(uint16_t n) {
 
 void bios(int n) {
     void intr(int);
+    static uint8_t buf[512];
     switch (n) {
         case 0x08: // timer
         {
@@ -353,6 +354,11 @@ void bios(int n) {
                     }
                     AH = CF = 0;
                     return;
+                case 0x05: // format
+                    fseek(d->f, (lba - s) << 9, SEEK_SET);
+                    fwrite(&buf, 512, d->s, d->f);
+                    AH = CF = 0;
+                    return;
                 case 0x08: // get drive params
                     AX = 0;
                     BL = d->type;
@@ -366,6 +372,12 @@ void bios(int n) {
                 case 0x15: // get disk type
                     AH = 1;
                     CF = 0;
+                    return;
+                case 0x18: // set media type
+                    d->c = c + 1;
+                    d->s = s + 1;
+                    ES = DI = 0;
+                    AH = CF = 0;
                     return;
             }
             CF = 1;

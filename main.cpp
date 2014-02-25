@@ -347,7 +347,7 @@ void bios(int n) {
                     fseek(d->f, lba << 9, SEEK_SET);
                     if (AH == 2) {
                         if (fread(&ES[BX], 512, AL, d->f) < 1) {
-                            memset(&ES[BX], 0, 512);
+                            memset(&ES[BX], 0, AL << 9);
                         }
                     } else {
                         fwrite(&ES[BX], 512, AL, d->f);

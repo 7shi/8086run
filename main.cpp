@@ -327,7 +327,6 @@ void bios(int n) {
         {
             switch (AH) { // ORIGINAL EXTENSIONS
                 case 0xfe: // hopen
-                    printf("[hopen:%s]\n", &DS[DX]), fflush(stdout);
                     CF = !(fhcopy = fopen((char *) &DS[DX], "rb"));
                     return;
                 case 0xff: // hcopy

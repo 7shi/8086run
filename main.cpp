@@ -258,6 +258,7 @@ uint8_t in(uint16_t n) {
 void bios(int n) {
     void intr(int);
     static uint8_t buf[512];
+    static FILE *fhcopy;
     switch (n) {
         case 0x08: // timer
         {
@@ -324,6 +325,22 @@ void bios(int n) {
             return;
         case 0x13: // disk
         {
+            switch (AH) { // ORIGINAL EXTENSIONS
+                case 0xfe: // hopen
+                    printf("[hopen:%s]\n", &DS[DX]), fflush(stdout);
+                    CF = !(fhcopy = fopen((char *) &DS[DX], "rb"));
+                    return;
+                case 0xff: // hcopy
+                    if (fhcopy) {
+                        if (!(CX = fread(&DS[DX], 1, 512, fhcopy))) {
+                            fclose(fhcopy);
+                            fhcopy = NULL;
+                        }
+                    } else {
+                        CX = 0;
+                    }
+                    return;
+            }
             if (DL > 1 || !disks[DL].f) {
                 CF = 1; // error
                 AH = 1; // invalid

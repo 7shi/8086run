@@ -1,6 +1,7 @@
 syntax: glob
 *.o
 *.exe
+*.com
 *core
 *.img
 8086run

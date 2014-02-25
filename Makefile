@@ -5,11 +5,15 @@ CFLAGS   = -O1 -Wall -g
 CXXFLAGS = $(CFLAGS)
 LDFLAGS  =
 SOURCES  = main.cpp
+OBJECTS  = $(SOURCES:.cpp=.o)
 
 all: $(TARGET) $(COMS)
 
-$(TARGET): $(SOURCES)
-	$(CXX) $(CXXFLAGS) -o $@ $(SOURCES) $(LDFLAGS)
+$(TARGET): $(OBJECTS)
+	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS)
+
+main.o: main.cpp
+	$(CXX) -c $(CXXFLAGS) main.cpp
 
 clean:
-	rm -f $(TARGET) $(TARGET).exe *core
+	rm -f $(TARGET) $(TARGET).exe *.o *core

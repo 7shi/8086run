@@ -6,13 +6,10 @@ CXXFLAGS = $(CFLAGS)
 LDFLAGS  =
 SOURCES  = main.cpp
 
-all: $(TARGET) hcopy.com
+all: $(TARGET) $(COMS)
 
 $(TARGET): $(SOURCES)
 	$(CXX) $(CXXFLAGS) -o $@ $(SOURCES) $(LDFLAGS)
 
-hcopy.com: hcopy.s
-	nasm -o $@ hcopy.s
-
 clean:
-	rm -f $(TARGET) $(TARGET).exe *core hcopy.com
+	rm -f $(TARGET) $(TARGET).exe *core

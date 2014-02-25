@@ -373,6 +373,9 @@ void bios(int n) {
                     AH = 1;
                     CF = 0;
                     return;
+                case 0x17: // set disk type
+                    CF = 0; // ignore
+                    return;
                 case 0x18: // set media type
                     d->c = c + 1;
                     d->s = s + 1;

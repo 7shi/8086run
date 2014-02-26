@@ -1,8 +1,12 @@
 ; hcopy: Host to Guest copy
 ; This file is in the public domain.
 
-	org 0x100
+org 0x100
 
+%define fname end
+%define buf end + 0x100
+
+start:
 	; fname = args
 	mov ch, 0
 	mov cl, [0x80]
@@ -16,6 +20,7 @@ copy:
 	mov di, fname
 	cld
 	rep movsb
+	mov [di], byte 0
 
 	; hopen fname
 	mov ah, 0xfe
@@ -90,7 +95,5 @@ err_usage db "usage: hcopy filename", 13, 10, "$"
 err_open db "can not open in host: $"
 err_create db "can not create: $"
 err_write db "can not write: $"
-crlf db 13, 10, "$"
 
-fname times 132 db 0
-buf times 512 db 0
+end:

@@ -858,6 +858,14 @@ void step(uint8_t rep, SReg *seg) {
         case 0x26: // es:
             ++IP;
             return step(rep, &ES);
+        case 0x27: // daa
+        {
+            ++IP;
+            int d = (AF = (AL & 15) > 9 || AF) ? 6 : 0;
+            if ((CF = AL > 0x99 || CF)) d += 0x60;
+            AL = setf8(AL + d);
+            return;
+        }
         case 0x28: // sub r/m, reg8
         case 0x29: // sub r/m, reg16
         case 0x2a: // sub reg8, r/m
@@ -873,6 +881,14 @@ void step(uint8_t rep, SReg *seg) {
         case 0x2e: // cs:
             ++IP;
             return step(rep, &CS);
+        case 0x2f: // das
+        {
+            ++IP;
+            int d = (AF = (AL & 15) > 9 || AF) ? 6 : 0;
+            if ((CF = AL > 0x99 || CF)) d += 0x60;
+            AL = setf8(AL - d);
+            return;
+        }
         case 0x30: // xor r/m, reg8
         case 0x31: // xor r/m, reg16
         case 0x32: // xor reg8, r/m
@@ -886,6 +902,14 @@ void step(uint8_t rep, SReg *seg) {
         case 0x36: // ss:
             ++IP;
             return step(rep, &SS);
+        case 0x37: // aaa
+            ++IP;
+            if ((CF = AF = (AL & 15) > 9 || AF)) {
+                AL += 6;
+                ++AH;
+            }
+            AL &= 15;
+            return;
         case 0x38: // cmp r/m, reg8
         case 0x39: // cmp r/m, reg16
         case 0x3a: // cmp reg8, r/m
@@ -901,6 +925,14 @@ void step(uint8_t rep, SReg *seg) {
         case 0x3e: // ds:
             ++IP;
             return step(rep, &DS);
+        case 0x3f: // aas
+            ++IP;
+            if ((CF = AF = (AL & 15) > 9 || AF)) {
+                AL -= 6;
+                --AH;
+            }
+            AL &= 15;
+            return;
         case 0x40: // inc reg16
         case 0x41:
         case 0x42:
@@ -1368,6 +1400,16 @@ void step(uint8_t rep, SReg *seg) {
         case 0xd3: // r/m, cl
             IP += opr1.modrm(p, b & 1, seg);
             return shift(&opr1, CL, p);
+        case 0xd4: // aam
+            IP += 2;
+            AH = AL / p[1];
+            AL = setf8(AL % p[1]);
+            return;
+        case 0xd5: // aad
+            IP += 2;
+            AL = setf8(AL + AH * p[1]);
+            AH = 0;
+            return;
         case 0xd7: // xlat
             ++IP;
             AL = (seg ? *seg : DS)[BX + AL];
@@ -1614,14 +1656,6 @@ void step(uint8_t rep, SReg *seg) {
                     return;
             }
             break;
-#if 0
-        case 0x27: // daa
-        case 0x2f: // das
-        case 0x37: // aaa
-        case 0x3f: // aas
-        case 0xd4: // aam
-        case 0xd5: // aad
-#endif
     }
     error("not implemented: %02x%02x%02x\n", b, p[1], p[2]);
 }

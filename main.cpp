@@ -835,7 +835,7 @@ void step(uint8_t rep, SReg *seg) {
             IP += opr1.getopr(&opr2, b, p, seg);
             val = (dst = *opr1) - (src = *opr2) - CF;
             AF = (dst & 15) - (src & 15) - CF < 0;
-            CF = opr1 < src || (CF && !(src + 1));
+            CF = opr1 < src + CF || (CF && !(src + 1));
             opr1 = opr1.setf(val);
             return;
         case 0x1e: // push ds
@@ -1038,7 +1038,7 @@ void step(uint8_t rep, SReg *seg) {
                 case 3: // sbb
                     val = (dst = *opr1) - (src = *opr2) - CF;
                     AF = (dst & 15) - (src & 15) - CF < 0;
-                    CF = opr1 < src || (CF && !(src + 1));
+                    CF = opr1 < src + CF || (CF && !(src + 1));
                     opr1 = opr1.setf(val);
                     return;
                 case 4: // and

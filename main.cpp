@@ -783,8 +783,8 @@ void step(uint8_t rep, SReg *seg) {
         case 0x05: // add ax, imm16
             IP += opr1.getopr(&opr2, b, p, seg);
             val = (dst = *opr1) + (src = *opr2);
-            CF = opr1 > val;
             AF = (dst & 15) + (src & 15) > 15;
+            CF = opr1 > val;
             opr1 = opr1.setf(val);
             return;
         case 0x06: // push es
@@ -872,8 +872,8 @@ void step(uint8_t rep, SReg *seg) {
         case 0x2d: // sub ax, imm16
             IP += opr1.getopr(&opr2, b, p, seg);
             val = (dst = *opr1) - (src = *opr2);
-            CF = opr1 < src;
             AF = (dst & 15) - (src & 15) < 0;
+            CF = opr1 < src;
             opr1 = opr1.setf(val);
             return;
         case 0x2e: // cs:
@@ -900,7 +900,7 @@ void step(uint8_t rep, SReg *seg) {
             return step(rep, &SS);
         case 0x37: // aaa
             ++IP;
-            if ((CF = AF = (AL & 15) > 9 || AF)) {
+            if ((AF = CF = (AL & 15) > 9 || AF)) {
                 AL += 6;
                 ++AH;
             }
@@ -914,8 +914,8 @@ void step(uint8_t rep, SReg *seg) {
         case 0x3d: // cmp ax, imm16
             IP += opr1.getopr(&opr2, b, p, seg);
             val = (dst = *opr1) - (src = *opr2);
-            CF = opr1 < src;
             AF = (dst & 15) - (src & 15) < 0;
+            CF = opr1 < src;
             opr1.setf(val);
             return;
         case 0x3e: // ds:
@@ -923,7 +923,7 @@ void step(uint8_t rep, SReg *seg) {
             return step(rep, &DS);
         case 0x3f: // aas
             ++IP;
-            if ((CF = AF = (AL & 15) > 9 || AF)) {
+            if ((AF = CF = (AL & 15) > 9 || AF)) {
                 AL -= 6;
                 --AH;
             }
@@ -1021,8 +1021,8 @@ void step(uint8_t rep, SReg *seg) {
             switch ((p[1] >> 3) & 7) {
                 case 0: // add
                     val = (dst = *opr1) + (src = *opr2);
-                    CF = opr1 > val;
                     AF = (dst & 15) + (src & 15) > 15;
+                    CF = opr1 > val;
                     opr1 = opr1.setf(val);
                     return;
                 case 1: // or
@@ -1047,8 +1047,8 @@ void step(uint8_t rep, SReg *seg) {
                     return;
                 case 5: // sub
                     val = (dst = *opr1) - (src = *opr2);
-                    CF = opr1 < src;
                     AF = (dst & 15) - (src & 15) < 0;
+                    CF = opr1 < src;
                     opr1 = opr1.setf(val);
                     return;
                 case 6: // xor
@@ -1057,8 +1057,8 @@ void step(uint8_t rep, SReg *seg) {
                     return;
                 case 7: // cmp
                     val = (dst = *opr1) - (src = *opr2);
-                    CF = opr1 < src;
                     AF = (dst & 15) - (src & 15) < 0;
+                    CF = opr1 < src;
                     opr1.setf(val);
                     return;
             }
@@ -1196,8 +1196,8 @@ void step(uint8_t rep, SReg *seg) {
             if (!seg) seg = &DS;
             do {
                 val = int8_t(dst = (*seg)[SI]) - int8_t(src = ES[DI]);
-                CF = dst < src;
                 AF = (dst & 15) - (src & 15) < 0;
+                CF = dst < src;
                 setf8(val);
                 if (DF) {
                     SI--;
@@ -1214,8 +1214,8 @@ void step(uint8_t rep, SReg *seg) {
             if (!seg) seg = &DS;
             do {
                 val = int16_t(dst = read16(&(*seg)[SI])) - int16_t(src = read16(&ES[DI]));
-                CF = dst < src;
                 AF = (dst & 15) - (src & 15) < 0;
+                CF = dst < src;
                 setf16(val);
                 if (DF) {
                     SI -= 2;
@@ -1275,8 +1275,8 @@ void step(uint8_t rep, SReg *seg) {
             if (rep && !CX) return;
             do {
                 val = int8_t(dst = AL) - int8_t(src = ES[DI]);
-                CF = dst < src;
                 AF = (dst & 15) - (src & 15) < 0;
+                CF = dst < src;
                 setf8(val);
                 if (DF) DI--;
                 else DI++;
@@ -1287,8 +1287,8 @@ void step(uint8_t rep, SReg *seg) {
             if (rep && !CX) return;
             do {
                 val = int16_t(dst = AX) - int16_t(src = read16(&ES[DI]));
-                CF = dst < src;
                 AF = (dst & 15) - (src & 15) < 0;
+                CF = dst < src;
                 setf16(val);
                 if (DF) DI -= 2;
                 else DI += 2;
@@ -1501,8 +1501,8 @@ void step(uint8_t rep, SReg *seg) {
                     return;
                 case 3: // neg byte r/m
                     src = *opr1;
-                    CF = src;
                     AF = src & 15;
+                    CF = src;
                     opr1 = setf8(-src);
                     return;
                 case 4: // mul byte r/m
@@ -1541,8 +1541,8 @@ void step(uint8_t rep, SReg *seg) {
                     return;
                 case 3: // neg r/m
                     src = *opr1;
-                    CF = src;
                     AF = src & 15;
+                    CF = src;
                     opr1 = setf16(-int16_t(src));
                     return;
                 case 4:

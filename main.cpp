@@ -814,9 +814,9 @@ void step(uint8_t rep, SReg *seg) {
         case 0x14: // adc al, imm8
         case 0x15: // adc ax, imm16
             IP += opr1.getopr(&opr2, b, p, seg);
-            val = (dst = *opr1) + (src = *opr2 + CF);
-            CF = opr1 > val || (CF && !src);
-            AF = (dst & 15) + (src & 15) > 15;
+            val = (dst = *opr1) + (src = *opr2) + CF;
+            AF = (dst & 15) + (src & 15) + CF > 15;
+            CF = opr1 > val || (CF && !(src + 1));
             opr1 = opr1.setf(val);
             return;
         case 0x16: // push ss
@@ -833,9 +833,9 @@ void step(uint8_t rep, SReg *seg) {
         case 0x1c: // sbb al, imm8
         case 0x1d: // sbb ax, imm16
             IP += opr1.getopr(&opr2, b, p, seg);
-            val = (dst = *opr1) - (src = *opr2 + CF);
-            CF = opr1 < src || (CF && !src);
-            AF = (dst & 15) - (src & 15) < 0;
+            val = (dst = *opr1) - (src = *opr2) - CF;
+            AF = (dst & 15) - (src & 15) - CF < 0;
+            CF = opr1 < src || (CF && !(src + 1));
             opr1 = opr1.setf(val);
             return;
         case 0x1e: // push ds
@@ -1030,15 +1030,15 @@ void step(uint8_t rep, SReg *seg) {
                     opr1 = opr1.setf(*opr1 | *opr2);
                     return;
                 case 2: // adc
-                    val = (dst = *opr1) + (src = *opr2 + CF);
-                    CF = opr1 > val || (CF && !src);
-                    AF = (dst & 15) + (src & 15) > 15;
+                    val = (dst = *opr1) + (src = *opr2) + CF;
+                    AF = (dst & 15) + (src & 15) + CF > 15;
+                    CF = opr1 > val || (CF && !(src + 1));
                     opr1 = opr1.setf(val);
                     return;
                 case 3: // sbb
-                    val = (dst = *opr1) - (src = *opr2 + CF);
-                    CF = opr1 < src || (CF && !src);
-                    AF = (dst & 15) - (src & 15) < 0;
+                    val = (dst = *opr1) - (src = *opr2) - CF;
+                    AF = (dst & 15) - (src & 15) - CF < 0;
+                    CF = opr1 < src || (CF && !(src + 1));
                     opr1 = opr1.setf(val);
                     return;
                 case 4: // and

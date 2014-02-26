@@ -939,7 +939,7 @@ void step(uint8_t rep, SReg *seg) {
         case 0x47:
             ++IP;
             r[b & 7] = val = setf16(int16_t(r[b & 7]) + 1);
-            AF = !val;
+            AF = !(val & 15);
             return;
         case 0x48: // dec reg16
         case 0x49:
@@ -1606,7 +1606,7 @@ void step(uint8_t rep, SReg *seg) {
             switch ((p[1] >> 3) & 7) {
                 case 0: // inc
                     opr1 = val = setf8(*opr1 + 1);
-                    AF = !val;
+                    AF = !(val & 15);
                     return;
                 case 1: // dec
                     opr1 = val = setf8(*opr1 - 1);
@@ -1619,7 +1619,7 @@ void step(uint8_t rep, SReg *seg) {
             switch ((p[1] >> 3) & 7) {
                 case 0: // inc
                     opr1 = val = setf16(*opr1 + 1);
-                    AF = !val;
+                    AF = !(val & 15);
                     return;
                 case 1: // dec
                     opr1 = val = setf16(*opr1 - 1);

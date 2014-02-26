@@ -1,6 +1,7 @@
 ; This file is in the public domain.
 
 org 0x100
+
 mov ah, 9
 mov dx, hello
 int 0x21

@@ -859,13 +859,11 @@ void step(uint8_t rep, SReg *seg) {
             ++IP;
             return step(rep, &ES);
         case 0x27: // daa
-        {
             ++IP;
-            int d = (AF = (AL & 15) > 9 || AF) ? 6 : 0;
-            if ((CF = AL > 0x99 || CF)) d += 0x60;
-            AL = setf8(AL + d);
+            val = (AF = (AL & 15) > 9 || AF) ? 6 : 0;
+            if ((CF = AL > 0x99 || CF)) val += 0x60;
+            AL = setf8(AL + val);
             return;
-        }
         case 0x28: // sub r/m, reg8
         case 0x29: // sub r/m, reg16
         case 0x2a: // sub reg8, r/m
@@ -882,13 +880,11 @@ void step(uint8_t rep, SReg *seg) {
             ++IP;
             return step(rep, &CS);
         case 0x2f: // das
-        {
             ++IP;
-            int d = (AF = (AL & 15) > 9 || AF) ? 6 : 0;
-            if ((CF = AL > 0x99 || CF)) d += 0x60;
-            AL = setf8(AL - d);
+            val = (AF = (AL & 15) > 9 || AF) ? 6 : 0;
+            if ((CF = AL > 0x99 || CF)) val += 0x60;
+            AL = setf8(AL - val);
             return;
-        }
         case 0x30: // xor r/m, reg8
         case 0x31: // xor r/m, reg16
         case 0x32: // xor reg8, r/m

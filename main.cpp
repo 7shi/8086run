@@ -782,8 +782,9 @@ void step(uint8_t rep, SReg *seg) {
         case 0x04: // add al, imm8
         case 0x05: // add ax, imm16
             IP += opr1.getopr(&opr2, b, p, seg);
-            val = *opr1 + *opr2;
+            val = (dst = *opr1) + (src = *opr2);
             CF = opr1 > val;
+            AF = (dst & 15) + (src & 15) > 15;
             opr1 = opr1.setf(val);
             return;
         case 0x06: // push es
@@ -813,8 +814,9 @@ void step(uint8_t rep, SReg *seg) {
         case 0x14: // adc al, imm8
         case 0x15: // adc ax, imm16
             IP += opr1.getopr(&opr2, b, p, seg);
-            val = *opr1 + (src = *opr2 + CF);
+            val = (dst = *opr1) + (src = *opr2 + CF);
             CF = opr1 > val || (CF && !src);
+            AF = (dst & 15) + (src & 15) > 15;
             opr1 = opr1.setf(val);
             return;
         case 0x16: // push ss
@@ -831,8 +833,9 @@ void step(uint8_t rep, SReg *seg) {
         case 0x1c: // sbb al, imm8
         case 0x1d: // sbb ax, imm16
             IP += opr1.getopr(&opr2, b, p, seg);
-            val = *opr1 - (src = *opr2 + CF);
+            val = (dst = *opr1) - (src = *opr2 + CF);
             CF = opr1 < src || (CF && !src);
+            AF = (dst & 15) - (src & 15) < 0;
             opr1 = opr1.setf(val);
             return;
         case 0x1e: // push ds
@@ -862,8 +865,9 @@ void step(uint8_t rep, SReg *seg) {
         case 0x2c: // sub al, imm8
         case 0x2d: // sub ax, imm16
             IP += opr1.getopr(&opr2, b, p, seg);
-            val = *opr1 - (src = *opr2);
+            val = (dst = *opr1) - (src = *opr2);
             CF = opr1 < src;
+            AF = (dst & 15) - (src & 15) < 0;
             opr1 = opr1.setf(val);
             return;
         case 0x2e: // cs:
@@ -889,8 +893,9 @@ void step(uint8_t rep, SReg *seg) {
         case 0x3c: // cmp al, imm8
         case 0x3d: // cmp ax, imm16
             IP += opr1.getopr(&opr2, b, p, seg);
-            val = *opr1 - (src = *opr2);
+            val = (dst = *opr1) - (src = *opr2);
             CF = opr1 < src;
+            AF = (dst & 15) - (src & 15) < 0;
             opr1.setf(val);
             return;
         case 0x3e: // ds:
@@ -905,7 +910,8 @@ void step(uint8_t rep, SReg *seg) {
         case 0x46:
         case 0x47:
             ++IP;
-            r[b & 7] = setf16(int16_t(r[b & 7]) + 1);
+            r[b & 7] = val = setf16(int16_t(r[b & 7]) + 1);
+            AF = !val;
             return;
         case 0x48: // dec reg16
         case 0x49:
@@ -916,7 +922,8 @@ void step(uint8_t rep, SReg *seg) {
         case 0x4e:
         case 0x4f:
             ++IP;
-            r[b & 7] = setf16(int16_t(r[b & 7]) - 1);
+            r[b & 7] = val = setf16(int16_t(r[b & 7]) - 1);
+            AF = (val & 15) == 15;
             return;
         case 0x50: // push reg16
         case 0x51:
@@ -985,8 +992,9 @@ void step(uint8_t rep, SReg *seg) {
             IP += 1 + opr2.w;
             switch ((p[1] >> 3) & 7) {
                 case 0: // add
-                    val = *opr1 + *opr2;
+                    val = (dst = *opr1) + (src = *opr2);
                     CF = opr1 > val;
+                    AF = (dst & 15) + (src & 15) > 15;
                     opr1 = opr1.setf(val);
                     return;
                 case 1: // or
@@ -994,13 +1002,15 @@ void step(uint8_t rep, SReg *seg) {
                     opr1 = opr1.setf(*opr1 | *opr2);
                     return;
                 case 2: // adc
-                    val = *opr1 + (src = *opr2 + CF);
+                    val = (dst = *opr1) + (src = *opr2 + CF);
                     CF = opr1 > val || (CF && !src);
+                    AF = (dst & 15) + (src & 15) > 15;
                     opr1 = opr1.setf(val);
                     return;
                 case 3: // sbb
-                    val = *opr1 - (src = *opr2 + CF);
+                    val = (dst = *opr1) - (src = *opr2 + CF);
                     CF = opr1 < src || (CF && !src);
+                    AF = (dst & 15) - (src & 15) < 0;
                     opr1 = opr1.setf(val);
                     return;
                 case 4: // and
@@ -1008,8 +1018,9 @@ void step(uint8_t rep, SReg *seg) {
                     opr1 = opr1.setf(*opr1 & *opr2);
                     return;
                 case 5: // sub
-                    val = *opr1 - (src = *opr2);
+                    val = (dst = *opr1) - (src = *opr2);
                     CF = opr1 < src;
+                    AF = (dst & 15) - (src & 15) < 0;
                     opr1 = opr1.setf(val);
                     return;
                 case 6: // xor
@@ -1017,8 +1028,9 @@ void step(uint8_t rep, SReg *seg) {
                     opr1 = opr1.setf(*opr1 ^ *opr2);
                     return;
                 case 7: // cmp
-                    val = *opr1 - (src = *opr2);
+                    val = (dst = *opr1) - (src = *opr2);
                     CF = opr1 < src;
+                    AF = (dst & 15) - (src & 15) < 0;
                     opr1.setf(val);
                     return;
             }
@@ -1157,6 +1169,7 @@ void step(uint8_t rep, SReg *seg) {
             do {
                 val = int8_t(dst = (*seg)[SI]) - int8_t(src = ES[DI]);
                 CF = dst < src;
+                AF = (dst & 15) - (src & 15) < 0;
                 setf8(val);
                 if (DF) {
                     SI--;
@@ -1174,6 +1187,7 @@ void step(uint8_t rep, SReg *seg) {
             do {
                 val = int16_t(dst = read16(&(*seg)[SI])) - int16_t(src = read16(&ES[DI]));
                 CF = dst < src;
+                AF = (dst & 15) - (src & 15) < 0;
                 setf16(val);
                 if (DF) {
                     SI -= 2;
@@ -1232,8 +1246,9 @@ void step(uint8_t rep, SReg *seg) {
             ++IP;
             if (rep && !CX) return;
             do {
-                val = int8_t(AL) - int8_t(src = ES[DI]);
-                CF = AL < src;
+                val = int8_t(dst = AL) - int8_t(src = ES[DI]);
+                CF = dst < src;
+                AF = (dst & 15) - (src & 15) < 0;
                 setf8(val);
                 if (DF) DI--;
                 else DI++;
@@ -1243,8 +1258,9 @@ void step(uint8_t rep, SReg *seg) {
             ++IP;
             if (rep && !CX) return;
             do {
-                val = int16_t(AX) - int16_t(src = read16(&ES[DI]));
-                CF = AX < src;
+                val = int16_t(dst = AX) - int16_t(src = read16(&ES[DI]));
+                CF = dst < src;
+                AF = (dst & 15) - (src & 15) < 0;
                 setf16(val);
                 if (DF) DI -= 2;
                 else DI += 2;
@@ -1448,6 +1464,7 @@ void step(uint8_t rep, SReg *seg) {
                 case 3: // neg byte r/m
                     src = *opr1;
                     CF = src;
+                    AF = src & 15;
                     opr1 = setf8(-src);
                     return;
                 case 4: // mul byte r/m
@@ -1487,6 +1504,7 @@ void step(uint8_t rep, SReg *seg) {
                 case 3: // neg r/m
                     src = *opr1;
                     CF = src;
+                    AF = src & 15;
                     opr1 = setf16(-int16_t(src));
                     return;
                 case 4:
@@ -1549,10 +1567,12 @@ void step(uint8_t rep, SReg *seg) {
             IP += opr1.modrm(p, 0, seg);
             switch ((p[1] >> 3) & 7) {
                 case 0: // inc
-                    opr1 = setf8(*opr1 + 1);
+                    opr1 = val = setf8(*opr1 + 1);
+                    AF = !val;
                     return;
                 case 1: // dec
-                    opr1 = setf8(*opr1 - 1);
+                    opr1 = val = setf8(*opr1 - 1);
+                    AF = (val & 15) == 15;
                     return;
             }
             break;
@@ -1560,10 +1580,12 @@ void step(uint8_t rep, SReg *seg) {
             IP += opr1.modrm(p, 1, seg);
             switch ((p[1] >> 3) & 7) {
                 case 0: // inc
-                    opr1 = setf16(*opr1 + 1);
+                    opr1 = val = setf16(*opr1 + 1);
+                    AF = !val;
                     return;
                 case 1: // dec
-                    opr1 = setf16(*opr1 - 1);
+                    opr1 = val = setf16(*opr1 - 1);
+                    AF = (val & 15) == 15;
                     return;
                 case 2: // call
                     push(IP);

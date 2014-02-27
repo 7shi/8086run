@@ -97,15 +97,18 @@ read:
 	mov cx, 512
 	int 0x21
 	jc short error_read
-	test ax, ax
-	jz short close
-	
-	; hwrite buf cx
 	mov cx, ax
+	call hwrite
+	test cx, cx
+	jnz short read
+	jmp close
+
+hwrite:
+	; hwrite buf cx
 	mov ah, 0xff
 	mov dx, buf
 	int 0x13
-	jmp read
+	ret
 
 close:
 	; close bx
@@ -140,6 +143,8 @@ error_create:
 	jmp showfnexit
 
 error_read:
+	xor cx, cx
+	call hwrite
 	mov dx, err_read
 	jmp showfnexit
 	

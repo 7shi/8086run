@@ -259,6 +259,7 @@ void bios(int n) {
     void intr(int);
     static uint8_t buf[512];
     static FILE *fhcopy;
+    static bool hread;
     switch (n) {
         case 0x08: // timer
         {
@@ -327,11 +328,18 @@ void bios(int n) {
         {
             switch (AH) { // ORIGINAL EXTENSIONS
                 case 0xfe: // hopen
-                    CF = !(fhcopy = fopen((char *) &DS[DX], "rb"));
+                    if (fhcopy) fclose(fhcopy);
+                    hread = AL != 1;
+                    CF = !(fhcopy = fopen((char *) &DS[DX], hread ? "rb" : "wb"));
                     return;
                 case 0xff: // hcopy
                     if (fhcopy) {
-                        if (!(CX = fread(&DS[DX], 1, 512, fhcopy))) {
+                        if (hread) {
+                            CX = fread(&DS[DX], 1, 512, fhcopy);
+                        } else {
+                            CX = fwrite(&DS[DX], 1, CX, fhcopy);
+                        }
+                        if (!CX) {
                             fclose(fhcopy);
                             fhcopy = NULL;
                         }

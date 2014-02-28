@@ -155,15 +155,16 @@ showfnexit:
 	mov ah, 9
 	int 0x21
 	mov dx, fname
-	mov [di], word 0x240a
+	mov [di], word 0x0a0d
+	mov [di+2], byte "$"
 	int 0x21
 exit1:
 	mov ax, 0x4c01
 	int 0x21
 
-err_usage   db "usage: hcopy [/s] filename", 10
-            db "  default  copy from host", 10
-            db "  /s       send to host", 10, "$"
+err_usage   db "usage: hcopy [/s] filename", 13, 10
+            db "  default  copy from host", 13, 10
+            db "  /s       send to host", 13, 10, "$"
 err_hopen   db "can not open in host: $"
 err_hcreate db "can not create in host: $"
 err_open    db "can not open: $"

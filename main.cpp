@@ -50,6 +50,7 @@ int getch() {
 }
 
 int kbhit() {
+    if (kbchar != EOF) return 1;
     int f = fcntl(STDIN_FILENO, F_GETFL, 0);
     fcntl(STDIN_FILENO, F_SETFL, f | O_NONBLOCK);
     char ch;

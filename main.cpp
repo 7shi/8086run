@@ -61,9 +61,12 @@ int kbhit() {
 
 termios oldt;
 
-void resettty(int) {
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+void siginthandler(int) {
     exit(1);
+}
+
+void resettty() {
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 }
 
 void inittty() {
@@ -73,18 +76,12 @@ void inittty() {
 
     struct sigaction sa;
     memset(&sa, 0, sizeof (sa));
-    sa.sa_handler = resettty;
+    sa.sa_handler = siginthandler;
     sigaction(SIGINT, &sa, NULL);
+    atexit(resettty);
 
     t.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &t);
-    if (!fork()) return;
-
-    int st;
-    wait(&st);
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    if (WIFEXITED(st)) exit(WEXITSTATUS(st));
-    exit(1);
 }
 #endif
 

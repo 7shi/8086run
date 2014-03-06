@@ -780,7 +780,7 @@ inline void shift(Operand *opr, int c, uint8_t *p) {
             break;
         case 7: // sar
             if (c > 0) {
-                val = int8_t(val) >> (c - 1);
+                val = **opr >> (c - 1);
                 *opr = opr->setf(val >> 1);
                 CF = val & 1;
                 OF = false;

@@ -1680,6 +1680,7 @@ void step(uint8_t rep, SReg *seg) {
 }
 
 int main(int argc, char *argv[]) {
+    char* appname = argv[0];
     inittty();
     if (argc > 1 && !strcmp(argv[1], "-hlt")) {
         hltend = true;
@@ -1687,7 +1688,7 @@ int main(int argc, char *argv[]) {
         ++argv;
     }
     if (argc < 2 || 3 < argc) {
-        fprintf(stderr, "usage: %s fd1image [fd2image]\n", argv[0]);
+        fprintf(stderr, "usage: %s [-hlt] fd1image [fd2image]\n", appname);
         return 1;
     }
     for (int i = 1; i < argc; ++i) {

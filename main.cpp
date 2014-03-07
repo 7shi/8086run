@@ -269,32 +269,25 @@ uint8_t kbscan[] = {
 
 // If there is an input to enqueue, return true.
 // Otherwise, return false.
-bool isDecodingKey;
 
-bool decodeKey(uint8_t *ascii, uint8_t *scan, uint8_t ch) {
+uint16_t decodeKey(uint8_t ch) {
+    static bool isDecodingKey;
 #ifdef _WIN32
     if (isDecodingKey) {
-        *ascii = 0x00;
-        *scan = ch;
         isDecodingKey = false;
-        return true;
-    } else if (ch == 0x0 || ch == 0xe0) {
+        return ch << 8;
+    } else if (ch == 0x00 || ch == 0xe0) {
         isDecodingKey = true;
     } else if (ch < 128 && kbscan[ch]) {
-        *ascii = ch;
-        *scan = kbscan[ch];
-        return true;
+        return (kbscan[ch] << 8) | ch;
     }
-    return false;
 #else
     // TODO
     if (ch < 128 && kbscan[ch]) {
-        *ascii = ch;
-        *scan = kbscan[ch];
-        return true;
+        return (kbscan[ch] << 8) | ch;
     }
-    return false;
 #endif
+    return 0;
 }
 
 void bios(int n) {
@@ -327,11 +320,9 @@ void bios(int n) {
                 int tail = read16(&mem[0x41c]) - 0x1e;
                 int next = (tail + 2) & 0x1f;
                 if (next == head) break;
-                uint8_t ch = getch();
-                uint8_t ascii, scan;
-                if (decodeKey(&ascii, &scan, ch)) {
-                    mem[0x41e + tail] = ascii;
-                    mem[0x41f + tail] = scan;
+                uint16_t scanasc = decodeKey(getch());
+                if (scanasc) {
+                    write16(&mem[0x41e + tail], scanasc);
                     write16(&mem[0x41c], 0x1e + next);
                 }
             }

@@ -249,6 +249,7 @@ void error(const char *fmt, ...) {
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
     va_end(ap);
+    fputc('\n', stderr);
     exit(1);
 }
 
@@ -269,7 +270,7 @@ void out(uint16_t n, uint8_t v) {
         case 0x0061: // PPI 8255 - port B
             break;
         default:
-            error("not implemented: out %04x,%02x\n", n, v);
+            error("not implemented: out %04x,%02x", n, v);
     }
     io[n] = v;
 }
@@ -291,7 +292,7 @@ uint8_t in(uint16_t n) {
         case 0x03da: // CRTC 6845 - status register
             return io[n] = !io[n];
         default:
-            error("not implemented: in %04x\n", n);
+            error("not implemented: in %04x", n);
     }
     return io[n];
 }
@@ -303,7 +304,7 @@ void bios(int n) {
     static bool hread;
     switch (n) {
         case 0x00: // #DE
-            error("#DE: division exception\n");
+            error("#DE: division exception");
             break;
         case 0x08: // timer
         {
@@ -487,7 +488,7 @@ void bios(int n) {
             break;
         }
         case 0x18: // boot fault
-            error("Boot failed (INT 18H)\n");
+            error("Boot failed (INT 18H)");
             break;
         case 0x1a: // time
             switch (AH) {
@@ -529,7 +530,7 @@ void bios(int n) {
         case 0x1c: // timer handler
             return;
     }
-    error("not implemented: int %02x,%02x\n", n, AH);
+    error("not implemented: int %02x,%02x", n, AH);
 }
 
 inline int setf8(int value) {
@@ -1724,7 +1725,7 @@ void step(uint8_t rep, SReg *seg) {
             }
             break;
     }
-    error("not implemented: %02x%02x%02x\n", b, p[1], p[2]);
+    error("not implemented: %02x%02x%02x", b, p[1], p[2]);
 }
 
 void movecursortobottom(void) {

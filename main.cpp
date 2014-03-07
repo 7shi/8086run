@@ -1539,6 +1539,12 @@ void step(uint8_t rep, SReg *seg) {
                 case 6: // div byte r/m
                     dst = AX;
                     src = uint8_t(*opr1);
+                    if(src == 0) {
+                        error("division by zero: %d / %d\n", dst, src);
+                    }
+                    if(dst / src > 0xff) {
+                        error("division overflow: %d / %d\n", dst, src);
+                    }
                     AL = dst / src;
                     AH = dst % src;
                     return;
@@ -1586,6 +1592,12 @@ void step(uint8_t rep, SReg *seg) {
                 { // div r/m
                     uint32_t x = (DX << 16) | AX;
                     src = uint16_t(*opr1);
+                    if(src == 0) {
+                        error("division by zero: %u / %d\n", x, src);
+                    }
+                    if(x / src > 0xffff) {
+                        error("division overflow: %u / %d\n", x, src);
+                    }
                     AX = x / src;
                     DX = x % src;
                     return;

@@ -1808,10 +1808,7 @@ int main(int argc, char *argv[]) {
 
     ES = CS = SS = DS = 0;
     IP = 0x7c00;
-    if (fread(&mem[IP], 512, 1, disks[0].f) < 1) { // read MBR
-        fprintf(stderr,"MBR read error\n");
-        return 1;
-    }
+    fread(&mem[IP], 1, 512, disks[0].f); // read MBR
     write16(&mem[0x41a], 0x1e); // keyboard queue head
     write16(&mem[0x41c], 0x1e); // keyboard queue tail
     int interval = 1 << 16, counter = interval, pitc = 0, trial = 4;

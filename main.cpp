@@ -1552,6 +1552,12 @@ void step(uint8_t rep, SReg *seg) {
                 { // idiv byte r/m
                     val = int16_t(AX);
                     int16_t y = *opr1;
+                    if(y == 0) {
+                        error("division by zero: %d / %d\n", val, y);
+                    }
+                    if(val / y < -128 || 127 < val / y) {
+                        error("division overflow: %d / %d\n", val, y);
+                    }
                     AL = val / y;
                     AH = val % y;
                     return;
@@ -1606,6 +1612,12 @@ void step(uint8_t rep, SReg *seg) {
                 { // idiv r/m
                     int32_t x = (DX << 16) | AX;
                     int32_t y = *opr1;
+                    if(y == 0) {
+                        error("division by zero: %d / %d\n", x, y);
+                    }
+                    if(x / y < -32768 || 32767 < x / y) {
+                        error("division overflow: %d / %d\n", x, y);
+                    }
                     AX = x / y;
                     DX = x % y;
                     return;

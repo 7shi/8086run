@@ -1501,12 +1501,6 @@ void step(uint8_t rep, SReg *seg) {
             return;
         case 0xf4: // hlt
             if (hltend) {
-                if (cleared) {
-                    AH = 2, DL = 79, DH = 24;
-                    bios(0x10);
-                    AX = 0x0e0d;
-                    bios(0x10);
-                }
                 exit(0);
             }
             ++IP;
@@ -1700,9 +1694,19 @@ void step(uint8_t rep, SReg *seg) {
     error("not implemented: %02x%02x%02x\n", b, p[1], p[2]);
 }
 
+void movecursortobottom(void) {
+    if (cleared) {
+        AH = 2, DL = 79, DH = 24;
+        bios(0x10);
+        AX = 0x0e0d;
+        bios(0x10);
+    }
+}
+
 int main(int argc, char *argv[]) {
     char *appname = argv[0];
     inittty();
+    atexit(movecursortobottom);
     if (argc > 1 && !strcmp(argv[1], "-hlt")) {
         hltend = true;
         --argc;

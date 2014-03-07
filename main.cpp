@@ -1556,10 +1556,10 @@ void step(uint8_t rep, SReg *seg) {
                     if (src == 0) {
                         intr(0); // #DE
                     } else {
-                        uint16_t val = dst / src;
+                        int16_t val = dst / src;
                         AL = val;
                         AH = dst % src;
-                        if (AL != val) intr(0); // #DE
+                        if ((int8_t)AL != val) intr(0); // #DE
                     }
                     return;
             }
@@ -1616,7 +1616,7 @@ void step(uint8_t rep, SReg *seg) {
                     } else {
                         AX = val = dst / src;
                         DX = dst % src;
-                        if (AX != val) intr(0); // #DE
+                        if ((int16_t)AX != val) intr(0); // #DE
                     }
                     return;
             }

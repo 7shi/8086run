@@ -156,6 +156,18 @@ void dump(FILE *f, SReg *seg, uint16_t addr, int len) {
     fprintf(f, "\n");
 }
 
+void error(const char *fmt, ...) {
+    IP = oldip;
+    dump(stderr, &CS, IP - 0x18, 0x30);
+    debug(stderr, true);
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fputc('\n', stderr);
+    exit(1);
+}
+
 inline uint16_t read16(uint8_t *p) {
     return p[0] | (p[1] << 8);
 }
@@ -167,6 +179,73 @@ inline void write16(uint8_t *p, uint16_t value) {
 
 inline int bcd(int v) {
     return ((v / 10) << 4) | (v % 10);
+}
+
+struct Disk {
+    FILE *f;
+    int type, c, h, s;
+
+    bool open(const char *img) {
+        if (!(f = fopen(img, "r+b"))) return false;
+        struct stat st;
+        fstat(fileno(f), &st);
+        switch (st.st_size / 1024) {
+            case 360: // 2D
+                type = 1, c = 40, h = 2, s = 9;
+                break;
+            case 720: // 2DD
+                type = 3, c = 80, h = 2, s = 9;
+                break;
+            default: // 2HD
+                type = 4, c = 80, h = 2, s = 18;
+                break;
+        }
+        return true;
+    }
+} disks[2];
+
+void out(uint16_t n, uint8_t v) {
+    switch (n) {
+        case 0x0020: // PIC 8259 (master)
+            // TODO
+            break;
+        case 0x0021: // PIC 8259 (master) - OCW1
+            // TODO
+            break;
+        case 0x0042: // PIT 8254 - counter 2
+            // TODO
+            break;
+        case 0x0043: // PIT 8254 - interval, beep
+            // TODO
+            break;
+        case 0x0061: // PPI 8255 - port B
+            break;
+        default:
+            error("not implemented: out %04x,%02x", n, v);
+    }
+    io[n] = v;
+}
+
+uint8_t in(uint16_t n) {
+    switch (n) {
+        case 0x0020: // PIC 8259 (master)
+            // TODO
+            break;
+        case 0x0021: // PIC 8259 (master) - IMR
+            break;
+        case 0x0040: // PIT 8254 - counter 0
+            // TODO
+            break;
+        case 0x0061: // PPI 8255 - port B (beep)
+            break;
+        case 0x00a1: // PIC 8259 (slave) - IMR
+            break;
+        case 0x03da: // CRTC 6845 - status register
+            return io[n] = !io[n];
+        default:
+            error("not implemented: in %04x", n);
+    }
+    return io[n];
 }
 
 uint8_t kbscan[] = {
@@ -216,85 +295,6 @@ bool decodeKey(uint8_t *ascii, uint8_t *scan, uint8_t ch) {
     }
     return false;
 #endif
-}
-
-struct Disk {
-    FILE *f;
-    int type, c, h, s;
-
-    bool open(const char *img) {
-        if (!(f = fopen(img, "r+b"))) return false;
-        struct stat st;
-        fstat(fileno(f), &st);
-        switch (st.st_size / 1024) {
-            case 360: // 2D
-                type = 1, c = 40, h = 2, s = 9;
-                break;
-            case 720: // 2DD
-                type = 3, c = 80, h = 2, s = 9;
-                break;
-            default: // 2HD
-                type = 4, c = 80, h = 2, s = 18;
-                break;
-        }
-        return true;
-    }
-} disks[2];
-
-void error(const char *fmt, ...) {
-    IP = oldip;
-    dump(stderr, &CS, IP - 0x18, 0x30);
-    debug(stderr, true);
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    va_end(ap);
-    fputc('\n', stderr);
-    exit(1);
-}
-
-void out(uint16_t n, uint8_t v) {
-    switch (n) {
-        case 0x0020: // PIC 8259 (master)
-            // TODO
-            break;
-        case 0x0021: // PIC 8259 (master) - OCW1
-            // TODO
-            break;
-        case 0x0042: // PIT 8254 - counter 2
-            // TODO
-            break;
-        case 0x0043: // PIT 8254 - interval, beep
-            // TODO
-            break;
-        case 0x0061: // PPI 8255 - port B
-            break;
-        default:
-            error("not implemented: out %04x,%02x", n, v);
-    }
-    io[n] = v;
-}
-
-uint8_t in(uint16_t n) {
-    switch (n) {
-        case 0x0020: // PIC 8259 (master)
-            // TODO
-            break;
-        case 0x0021: // PIC 8259 (master) - IMR
-            break;
-        case 0x0040: // PIT 8254 - counter 0
-            // TODO
-            break;
-        case 0x0061: // PPI 8255 - port B (beep)
-            break;
-        case 0x00a1: // PIC 8259 (slave) - IMR
-            break;
-        case 0x03da: // CRTC 6845 - status register
-            return io[n] = !io[n];
-        default:
-            error("not implemented: in %04x", n);
-    }
-    return io[n];
 }
 
 void bios(int n) {

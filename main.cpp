@@ -279,7 +279,7 @@ uint16_t decodeKey(int ch) {
     static char stroke[8];
 #ifdef _WIN32
     if (stroke[0]) {
-        if (!strncmp(stroke, "\xe0", sizeof (stroke))) {
+        if (stroke[0] == 0xe0) {
             stroke[0] = 0;
             return ch << 8;
         }

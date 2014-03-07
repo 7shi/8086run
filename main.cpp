@@ -1733,8 +1733,9 @@ void moveCursorToBottom() {
 }
 
 int main(int argc, char *argv[]) {
-    char *appname = argv[0];
     inittty();
+
+    char *appname = argv[0];
     if (argc > 1 && !strcmp(argv[1], "-hlt")) {
         hltend = true;
         --argc;

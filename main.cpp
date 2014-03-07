@@ -188,6 +188,40 @@ uint8_t kbscan[] = {
     0x2d, 0x15, 0x2c, 0x1a, 0x2b, 0x1b, 0x29, 0x0e, // 78-7f
 };
 
+// If there is an input to enqueue, return true.
+// Otherwise, return false.
+#ifdef _WIN32
+bool decodekey_special;
+
+bool decodekey(uint8_t* ascii,uint8_t* scan,uint8_t ch) {
+    if (decodekey_special) {
+        *ascii = 0x00;
+        *scan = ch;
+        decodekey_special = false;
+        return true;
+    } else {
+        if(ch == 0x0 || ch == 0xe0) {
+            decodekey_special = true;
+        } else if (ch < 128 && kbscan[ch]) {
+            *ascii = ch;
+            *scan = kbscan[ch];
+            return true;
+        }
+    }
+    return false;
+}
+#else
+bool decodekey(uint8_t* ascii,uint8_t* scan,uint8_t ch) {
+    // TODO
+    if (ch < 128 && kbscan[ch]) {
+        *ascii = ch;
+        *scan = kbscan[ch];
+        return true;
+    }
+    return false;
+}
+#endif
+
 struct Disk {
     FILE *f;
     int type, c, h, s;
@@ -297,9 +331,10 @@ void bios(int n) {
                 int next = (tail + 2) & 0x1f;
                 if (next == head) break;
                 uint8_t ch = getch();
-                if (ch < 128 && kbscan[ch]) {
-                    mem[0x41e + tail] = ch;
-                    mem[0x41f + tail] = kbscan[ch];
+                uint8_t ascii,scan;
+                if (decodekey(&ascii, &scan, ch)) {
+                    mem[0x41e + tail] = ascii;
+                    mem[0x41f + tail] = scan;
                     write16(&mem[0x41c], 0x1e + next);
                 }
             }

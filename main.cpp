@@ -190,17 +190,17 @@ uint8_t kbscan[] = {
 
 // If there is an input to enqueue, return true.
 // Otherwise, return false.
-bool decodekey_special;
+bool isDecodingKey;
 
-bool decodekey(uint8_t *ascii, uint8_t *scan, uint8_t ch) {
+bool decodeKey(uint8_t *ascii, uint8_t *scan, uint8_t ch) {
 #ifdef _WIN32
-    if (decodekey_special) {
+    if (isDecodingKey) {
         *ascii = 0x00;
         *scan = ch;
-        decodekey_special = false;
+        isDecodingKey = false;
         return true;
     } else if (ch == 0x0 || ch == 0xe0) {
-        decodekey_special = true;
+        isDecodingKey = true;
     } else if (ch < 128 && kbscan[ch]) {
         *ascii = ch;
         *scan = kbscan[ch];
@@ -329,7 +329,7 @@ void bios(int n) {
                 if (next == head) break;
                 uint8_t ch = getch();
                 uint8_t ascii, scan;
-                if (decodekey(&ascii, &scan, ch)) {
+                if (decodeKey(&ascii, &scan, ch)) {
                     mem[0x41e + tail] = ascii;
                     mem[0x41f + tail] = scan;
                     write16(&mem[0x41c], 0x1e + next);
@@ -1728,7 +1728,7 @@ void step(uint8_t rep, SReg *seg) {
     error("not implemented: %02x%02x%02x", b, p[1], p[2]);
 }
 
-void movecursortobottom(void) {
+void moveCursortoBottom(void) {
     if (cleared) {
         AH = 2, DL = 79, DH = 24;
         bios(0x10);
@@ -1740,7 +1740,7 @@ void movecursortobottom(void) {
 int main(int argc, char *argv[]) {
     char *appname = argv[0];
     inittty();
-    atexit(movecursortobottom);
+    atexit(moveCursortoBottom);
     if (argc > 1 && !strcmp(argv[1], "-hlt")) {
         hltend = true;
         --argc;

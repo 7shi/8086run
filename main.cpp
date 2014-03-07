@@ -272,6 +272,9 @@ void bios(int n) {
     static FILE *fhcopy;
     static bool hread;
     switch (n) {
+        case 0x00: // #DE
+            error("#DE: division exception\n");
+            break;
         case 0x08: // timer
         {
             uint16_t low = read16(&mem[0x46c]);
@@ -1538,30 +1541,27 @@ void step(uint8_t rep, SReg *seg) {
                     return;
                 case 6: // div byte r/m
                     dst = AX;
-                    src = uint8_t(*opr1);
+                    src = opr1.u();
                     if (src == 0) {
-                        error("division by zero: %d / %d\n", dst, src);
+                        intr(0); // #DE
+                    } else {
+                        AL = val = dst / src;
+                        AH = dst % src;
+                        if (AL != val) intr(0); // #DE
                     }
-                    if (dst / src > 0xff) {
-                        error("division overflow: %d / %d\n", dst, src);
-                    }
-                    AL = dst / src;
-                    AH = dst % src;
                     return;
-                case 7:
-                { // idiv byte r/m
-                    val = int16_t(AX);
-                    int16_t y = *opr1;
-                    if (y == 0) {
-                        error("division by zero: %d / %d\n", val, y);
+                case 7: // idiv byte r/m
+                    dst = int16_t(AX);
+                    src = *opr1;
+                    if (src == 0) {
+                        intr(0); // #DE
+                    } else {
+                        uint16_t val = dst / src;
+                        AL = val;
+                        AH = dst % src;
+                        if (AL != val) intr(0); // #DE
                     }
-                    if (val / y < -128 || 127 < val / y) {
-                        error("division overflow: %d / %d\n", val, y);
-                    }
-                    AL = val / y;
-                    AH = val % y;
                     return;
-                }
             }
             break;
         case 0xf7:
@@ -1594,34 +1594,31 @@ void step(uint8_t rep, SReg *seg) {
                     AX = val;
                     OF = CF = DX;
                     return;
-                case 6:
-                { // div r/m
-                    uint32_t x = (DX << 16) | AX;
-                    src = uint16_t(*opr1);
+                case 6: // div r/m
+                {
+                    uint32_t dst = (DX << 16) | AX;
+                    src = opr1.u();
                     if (src == 0) {
-                        error("division by zero: %u / %d\n", x, src);
+                        intr(0); // #DE
+                    } else {
+                        uint32_t val = dst / src;
+                        AX = val;
+                        DX = dst % src;
+                        if (AX != val) intr(0); // #DE
                     }
-                    if (x / src > 0xffff) {
-                        error("division overflow: %u / %d\n", x, src);
-                    }
-                    AX = x / src;
-                    DX = x % src;
                     return;
                 }
-                case 7:
-                { // idiv r/m
-                    int32_t x = (DX << 16) | AX;
-                    int32_t y = *opr1;
-                    if (y == 0) {
-                        error("division by zero: %d / %d\n", x, y);
+                case 7: // idiv r/m
+                    dst = (DX << 16) | AX;
+                    src = *opr1;
+                    if (src == 0) {
+                        intr(0); // #DE
+                    } else {
+                        AX = val = dst / src;
+                        DX = dst % src;
+                        if (AX != val) intr(0); // #DE
                     }
-                    if (x / y < -32768 || 32767 < x / y) {
-                        error("division overflow: %d / %d\n", x, y);
-                    }
-                    AX = x / y;
-                    DX = x % y;
                     return;
-                }
             }
             break;
         case 0xf8: // clc

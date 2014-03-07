@@ -271,26 +271,34 @@ uint8_t kbscan[] = {
     0x2d, 0x15, 0x2c, 0x1a, 0x2b, 0x1b, 0x29, 0x0e, // 78-7f
 };
 
-// If there is an input to enqueue, return true.
-// Otherwise, return false.
+// If there is an input to enqueue, return 0.
+// Otherwise, return (scan << 8) | ascii.
 
-uint16_t decodeKey(uint8_t ch) {
-    static bool isDecodingKey;
+uint16_t decodeKey(int ch) {
+    if (ch == EOF) return 0;
+    static char stroke[8];
 #ifdef _WIN32
-    if (isDecodingKey) {
-        isDecodingKey = false;
-        return ch << 8;
-    } else if (ch == 0x00 || ch == 0xe0) {
-        isDecodingKey = true;
-    } else if (ch < 128 && kbscan[ch]) {
-        return (kbscan[ch] << 8) | ch;
+    if (stroke[0]) {
+        if (!strncmp(stroke, "\xe0", sizeof (stroke))) {
+            stroke[0] = 0;
+            return ch << 8;
+        }
+        stroke[0] = 0;
+    }
+    if (ch == 0xe0) {
+        stroke[0] = ch;
+        stroke[1] = 0;
+        return 0;
     }
 #else
-    // TODO
+    if (stroke[0]) {
+        // TODO
+        stroke[0] = 0;
+    }
+#endif
     if (ch < 128 && kbscan[ch]) {
         return (kbscan[ch] << 8) | ch;
     }
-#endif
     return 0;
 }
 

@@ -1539,10 +1539,10 @@ void step(uint8_t rep, SReg *seg) {
                 case 6: // div byte r/m
                     dst = AX;
                     src = uint8_t(*opr1);
-                    if(src == 0) {
+                    if (src == 0) {
                         error("division by zero: %d / %d\n", dst, src);
                     }
-                    if(dst / src > 0xff) {
+                    if (dst / src > 0xff) {
                         error("division overflow: %d / %d\n", dst, src);
                     }
                     AL = dst / src;
@@ -1552,10 +1552,10 @@ void step(uint8_t rep, SReg *seg) {
                 { // idiv byte r/m
                     val = int16_t(AX);
                     int16_t y = *opr1;
-                    if(y == 0) {
+                    if (y == 0) {
                         error("division by zero: %d / %d\n", val, y);
                     }
-                    if(val / y < -128 || 127 < val / y) {
+                    if (val / y < -128 || 127 < val / y) {
                         error("division overflow: %d / %d\n", val, y);
                     }
                     AL = val / y;
@@ -1598,10 +1598,10 @@ void step(uint8_t rep, SReg *seg) {
                 { // div r/m
                     uint32_t x = (DX << 16) | AX;
                     src = uint16_t(*opr1);
-                    if(src == 0) {
+                    if (src == 0) {
                         error("division by zero: %u / %d\n", x, src);
                     }
-                    if(x / src > 0xffff) {
+                    if (x / src > 0xffff) {
                         error("division overflow: %u / %d\n", x, src);
                     }
                     AX = x / src;
@@ -1612,10 +1612,10 @@ void step(uint8_t rep, SReg *seg) {
                 { // idiv r/m
                     int32_t x = (DX << 16) | AX;
                     int32_t y = *opr1;
-                    if(y == 0) {
+                    if (y == 0) {
                         error("division by zero: %d / %d\n", x, y);
                     }
-                    if(x / y < -32768 || 32767 < x / y) {
+                    if (x / y < -32768 || 32767 < x / y) {
                         error("division overflow: %d / %d\n", x, y);
                     }
                     AX = x / y;
@@ -1704,7 +1704,7 @@ void step(uint8_t rep, SReg *seg) {
 }
 
 int main(int argc, char *argv[]) {
-    char* appname = argv[0];
+    char *appname = argv[0];
     inittty();
     if (argc > 1 && !strcmp(argv[1], "-hlt")) {
         hltend = true;

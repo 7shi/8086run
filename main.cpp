@@ -1713,6 +1713,7 @@ int main(int argc, char *argv[]) {
     }
     if (argc < 2 || 3 < argc) {
         fprintf(stderr, "usage: %s [-hlt] fd1image [fd2image]\n", appname);
+        fprintf(stderr, "  -hlt: stop on HLT (for demo)\n");
         return 1;
     }
     for (int i = 1; i < argc; ++i) {

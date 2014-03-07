@@ -455,6 +455,9 @@ void bios(int n) {
             }
             break;
         }
+        case 0x18: // boot fault
+            error("Boot failed (INT 18H)\n");
+            break;
         case 0x1a: // time
             switch (AH) {
                 case 0x00: // get system time

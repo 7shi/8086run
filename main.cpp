@@ -292,8 +292,29 @@ uint16_t decodeKey(int ch) {
     }
 #else
     if (stroke[0]) {
-        // TODO
+        char s[] = {ch, 0};
+        strncat(stroke, s, sizeof(stroke));
+        if (!strcmp(stroke, "\x1b[")) {
+            return 0;
+        } else if (!strcmp(stroke, "\x1b[A")) { // up
+            stroke[0] = 0;
+            return 'H' << 8;
+        } else if (!strcmp(stroke, "\x1b[B")) { // down
+            stroke[0] = 0;
+            return 'P' << 8;
+        } else if (!strcmp(stroke, "\x1b[C")) { // right
+            stroke[0] = 0;
+            return 'M' << 8;
+        } else if (!strcmp(stroke, "\x1b[D")) { // left
+            stroke[0] = 0;
+            return 'K' << 8;
+        }
         stroke[0] = 0;
+    }
+    if (ch == 0x1b) {
+        stroke[0] = ch;
+        stroke[1] = 0;
+        return 0;
     }
 #endif
     if (ch < 128 && kbscan[ch]) {

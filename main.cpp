@@ -417,20 +417,38 @@ void bios(int n) {
                         AH = 4; // sector
                         return;
                     }
-                    fseek(d->f, lba << 9, SEEK_SET);
-                    if (AH == 2) {
-                        if (fread(&ES[BX], 512, AL, d->f) < 1) {
-                            memset(&ES[BX], 0, AL << 9);
-                        }
+                    if (fseek(d->f, lba << 9, SEEK_SET)) {
+                        CF = 1; // error
+                        AH = 0x20; // controller error
                     } else {
-                        fwrite(&ES[BX], 512, AL, d->f);
+                        if (AH == 2) {
+                            if (fread(&ES[BX], 512, AL, d->f) < 1) {
+                                memset(&ES[BX], 0, AL << 9);
+                                CF = 1; // error
+                                AH = 0x20; // controller error
+                            } else {
+                                AH = CF = 0;
+                            }
+                        } else {
+                            if (fwrite(&ES[BX], 512, AL, d->f) < 1) {
+                                CF = 1; // error
+                                AH = 0x20; // controller error
+                            } else {
+                                AH = CF = 0;
+                            }
+                        }
                     }
-                    AH = CF = 0;
                     return;
                 case 0x05: // format
-                    fseek(d->f, (lba - s) << 9, SEEK_SET);
-                    fwrite(&buf, 512, d->s, d->f);
-                    AH = CF = 0;
+                    if (fseek(d->f, (lba - s) << 9, SEEK_SET)) {
+                        CF = 1; // error
+                        AH = 0x20; // controller error
+                    } else if (fwrite(&buf, 512, d->s, d->f) < 1) {
+                        CF = 1; // error
+                        AH = 0x20; // controller error
+                    } else {
+                        AH = CF = 0;
+                    }
                     return;
                 case 0x08: // get drive params
                     AX = 0;

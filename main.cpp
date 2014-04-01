@@ -295,6 +295,9 @@ uint16_t decodeKey(int ch) {
     if (stroke_length > 0) {
         if(stroke_length < sizeof(stroke)) {
             stroke[stroke_length++] = ch;
+        } else {
+            stroke_length = 0;
+            return 0;
         }
         if (!strncmp(stroke, "\x1b[", stroke_length)) {
             return 0;

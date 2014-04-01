@@ -298,6 +298,11 @@ uint16_t decodeKey(int ch) {
         }
         if (!strncmp(stroke, "\x1b[", stroke_length)) {
             return 0;
+        } else if (!strncmp(stroke, "\x1bO", stroke_length)) { // NumLock
+            return 0;
+        } else if (!strncmp(stroke, "\x1bOP", stroke_length)) { // NumLock (ignore)
+            stroke_length = 0;
+            return 0;
         } else if (!strncmp(stroke, "\x1b[A", stroke_length)) { // up
             stroke_length = 0;
             return 'H' << 8;

@@ -292,8 +292,11 @@ uint16_t decodeKey(int ch) {
     }
 #else
     if (stroke[0]) {
-        char s[] = {ch, 0};
-        strncat(stroke, s, sizeof(stroke));
+        size_t len = strlen(stroke);
+        if(len < sizeof(stroke)-1) {
+            stroke[len] = ch;
+            stroke[len + 1] = '\0';
+        }
         if (!strcmp(stroke, "\x1b[")) {
             return 0;
         } else if (!strcmp(stroke, "\x1b[A")) { // up

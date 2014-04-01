@@ -534,6 +534,9 @@ void bios(int n) {
         case 0x18: // boot fault
             error("Boot failed (INT 18H)");
             break;
+        case 0x19: // bootstrap
+            error("Bootstrap (INT 19H) not implemented");
+            break;
         case 0x1a: // time
             switch (AH) {
                 case 0x00: // get system time

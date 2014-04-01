@@ -9,6 +9,7 @@
 #endif
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <stdint.h>
 #include <stdarg.h>
 #include <string.h>
@@ -318,6 +319,15 @@ uint16_t decodeKey(int ch) {
         } else if (!strncmp(stroke, "\x1b[D", stroke_length)) { // left
             stroke_length = 0;
             return 'K' << 8;
+        } else if (stroke_length > 2 && isdigit(ch)) { // F*
+            return 0;
+        } else if (stroke_length > 3 && ch == '~') { // F*
+            int num = atoi(stroke + 2);
+            stroke_length = 0;
+            if(11 <= num && num <= 15)return (num-11+0x3B) << 8;
+            if(17 <= num && num <= 21)return (num-17+0x40) << 8;
+            if(23 <= num && num <= 24)return (num-23+0x85) << 8;
+            return 0;
         }
         stroke_length = 0;
     }

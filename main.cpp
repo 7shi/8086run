@@ -277,46 +277,45 @@ uint8_t kbscan[] = {
 uint16_t decodeKey(int ch) {
     if (ch == EOF) return 0;
     static char stroke[8];
+    static unsigned int stroke_length = 0;
 #ifdef _WIN32
-    if (stroke[0]) {
-        if (stroke[0] == 0xe0) {
-            stroke[0] = 0;
+    if (stroke_length > 0) {
+        if ((unsigned char)stroke[0] == 0xe0 || (unsigned char)stroke[0] == 0x00) {
+            stroke_length = 0;
             return ch << 8;
         }
-        stroke[0] = 0;
+        stroke_length = 0;
     }
-    if (ch == 0xe0) {
+    if (ch == 0xe0 || ch == 0x00) {
         stroke[0] = ch;
-        stroke[1] = 0;
+        stroke_length = 1;
         return 0;
     }
 #else
-    if (stroke[0]) {
-        size_t len = strlen(stroke);
-        if(len < sizeof(stroke)-1) {
-            stroke[len] = ch;
-            stroke[len + 1] = '\0';
+    if (stroke_length > 0) {
+        if(stroke_length < sizeof(stroke)) {
+            stroke[stroke_length++] = ch;
         }
-        if (!strcmp(stroke, "\x1b[")) {
+        if (!strncmp(stroke, "\x1b[", stroke_length)) {
             return 0;
-        } else if (!strcmp(stroke, "\x1b[A")) { // up
-            stroke[0] = 0;
+        } else if (!strncmp(stroke, "\x1b[A", stroke_length)) { // up
+            stroke_length = 0;
             return 'H' << 8;
-        } else if (!strcmp(stroke, "\x1b[B")) { // down
-            stroke[0] = 0;
+        } else if (!strncmp(stroke, "\x1b[B", stroke_length)) { // down
+            stroke_length = 0;
             return 'P' << 8;
-        } else if (!strcmp(stroke, "\x1b[C")) { // right
-            stroke[0] = 0;
+        } else if (!strncmp(stroke, "\x1b[C", stroke_length)) { // right
+            stroke_length = 0;
             return 'M' << 8;
-        } else if (!strcmp(stroke, "\x1b[D")) { // left
-            stroke[0] = 0;
+        } else if (!strncmp(stroke, "\x1b[D", stroke_length)) { // left
+            stroke_length = 0;
             return 'K' << 8;
         }
-        stroke[0] = 0;
+        stroke_length = 0;
     }
     if (ch == 0x1b) {
         stroke[0] = ch;
-        stroke[1] = 0;
+        stroke_length = 1;
         return 0;
     }
 #endif

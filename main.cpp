@@ -580,6 +580,8 @@ void bios(int n) {
                     return; // ignore
             }
             break;
+        case 0x1b: // Control-Break handler
+            return;
         case 0x1c: // timer handler
             return;
     }

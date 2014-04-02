@@ -500,6 +500,9 @@ void bios(int n) {
             CF = 1;
             return;
         }
+        case 0x14: // serial port
+            CF = 1; // error
+            return;
         case 0x15: // system
             switch (AH) {
                 case 0x88: // get extended memory size
@@ -531,6 +534,9 @@ void bios(int n) {
             }
             break;
         }
+        case 0x17: // parallel port
+            CF = 1; // error
+            return;
         case 0x18: // boot fault
             error("Boot failed (INT 18H)");
             break;

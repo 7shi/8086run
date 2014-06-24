@@ -281,7 +281,7 @@ uint16_t decodeKey(int ch) {
     static unsigned int stroke_length = 0;
 #ifdef _WIN32
     if (stroke_length > 0) {
-        if ((unsigned char)stroke[0] == 0xe0 || (unsigned char)stroke[0] == 0x00) {
+        if ((unsigned char) stroke[0] == 0xe0 || (unsigned char) stroke[0] == 0x00) {
             stroke_length = 0;
             return ch << 8;
         }
@@ -294,7 +294,7 @@ uint16_t decodeKey(int ch) {
     }
 #else
     if (stroke_length > 0) {
-        if(stroke_length < sizeof(stroke)) {
+        if (stroke_length < sizeof (stroke)) {
             stroke[stroke_length++] = ch;
         } else {
             stroke_length = 0;
@@ -324,9 +324,9 @@ uint16_t decodeKey(int ch) {
         } else if (stroke_length > 3 && ch == '~') { // F*
             int num = atoi(stroke + 2);
             stroke_length = 0;
-            if(11 <= num && num <= 15)return (num-11+0x3B) << 8;
-            if(17 <= num && num <= 21)return (num-17+0x40) << 8;
-            if(23 <= num && num <= 24)return (num-23+0x85) << 8;
+            if (11 <= num && num <= 15) return (num - 11 + 0x3B) << 8;
+            if (17 <= num && num <= 21) return (num - 17 + 0x40) << 8;
+            if (23 <= num && num <= 24) return (num - 23 + 0x85) << 8;
             return 0;
         }
         stroke_length = 0;

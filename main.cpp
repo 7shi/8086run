@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <string>
 
 void moveCursorToBottom();
 
@@ -277,65 +278,56 @@ uint8_t kbscan[] = {
 
 uint16_t decodeKey(int ch) {
     if (ch == EOF) return 0;
-    static char stroke[8];
-    static unsigned int stroke_length = 0;
 #ifdef _WIN32
-    if (stroke_length > 0) {
-        if ((unsigned char) stroke[0] == 0xe0 || (unsigned char) stroke[0] == 0x00) {
-            stroke_length = 0;
-            return ch << 8;
-        }
-        stroke_length = 0;
+    static int stroke = -1;
+    if (stroke == 0xe0 || stroke == 0) {
+        stroke = EOF;
+        return ch << 8;
     }
-    if (ch == 0xe0 || ch == 0x00) {
-        stroke[0] = ch;
-        stroke_length = 1;
+    if (ch == 0xe0 || ch == 0) {
+        stroke = ch;
         return 0;
     }
+    stroke = EOF;
 #else
-    if (stroke_length > 0) {
-        if (stroke_length < sizeof (stroke)) {
-            stroke[stroke_length++] = ch;
-        } else {
-            stroke_length = 0;
+    static std::string stroke;
+    if (!stroke.empty()) {
+        stroke += ch;
+        if (stroke == "\x1bO") { // NumLock
             return 0;
-        }
-        if (!strncmp(stroke, "\x1b[", stroke_length)) {
+        } else if (stroke == "\x1bOP") { // NumLock (ignore)
+            stroke.clear();
             return 0;
-        } else if (!strncmp(stroke, "\x1bO", stroke_length)) { // NumLock
+        } else if (stroke == "\x1b[") {
             return 0;
-        } else if (!strncmp(stroke, "\x1bOP", stroke_length)) { // NumLock (ignore)
-            stroke_length = 0;
-            return 0;
-        } else if (!strncmp(stroke, "\x1b[A", stroke_length)) { // up
-            stroke_length = 0;
+        } else if (stroke == "\x1b[A") { // up
+            stroke.clear();
             return 'H' << 8;
-        } else if (!strncmp(stroke, "\x1b[B", stroke_length)) { // down
-            stroke_length = 0;
+        } else if (stroke == "\x1b[B") { // down
+            stroke.clear();
             return 'P' << 8;
-        } else if (!strncmp(stroke, "\x1b[C", stroke_length)) { // right
-            stroke_length = 0;
+        } else if (stroke == "\x1b[C") { // right
+            stroke.clear();
             return 'M' << 8;
-        } else if (!strncmp(stroke, "\x1b[D", stroke_length)) { // left
-            stroke_length = 0;
+        } else if (stroke == "\x1b[D") { // left
+            stroke.clear();
             return 'K' << 8;
-        } else if (stroke_length > 2 && isdigit(ch)) { // F*
+        } else if (stroke.length() > 2 && isdigit(ch)) { // F*
             return 0;
-        } else if (stroke_length > 3 && ch == '~') { // F*
-            int num = atoi(stroke + 2);
-            stroke_length = 0;
-            if (11 <= num && num <= 15) return (num - 11 + 0x3B) << 8;
-            if (17 <= num && num <= 21) return (num - 17 + 0x40) << 8;
-            if (23 <= num && num <= 24) return (num - 23 + 0x85) << 8;
+        } else if (stroke.length() > 3 && ch == '~') { // F*
+            int num = atoi(&stroke[2]);
+            stroke.clear();
+            if (11 <= num && num <= 15) return (0x3b + (num - 11)) << 8;
+            if (17 <= num && num <= 21) return (0x40 + (num - 17)) << 8;
+            if (23 <= num && num <= 24) return (0x85 + (num - 23)) << 8;
             return 0;
         }
-        stroke_length = 0;
     }
     if (ch == 0x1b) {
-        stroke[0] = ch;
-        stroke_length = 1;
+        stroke = "\x1b";
         return 0;
     }
+    stroke.clear();
 #endif
     if (ch < 128 && kbscan[ch]) {
         return (kbscan[ch] << 8) | ch;

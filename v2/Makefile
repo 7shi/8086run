@@ -18,3 +18,11 @@ $(TARGET): $(OBJECTS)
 
 clean:
 	rm -f $(TARGET) $(TARGET).exe *.o *core
+
+depend:
+	rm -f dependencies
+	for cpp in $(SOURCES); do \
+		g++ -MM $(CXXFLAGS) $$cpp >> dependencies; \
+	done
+
+-include dependencies

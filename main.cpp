@@ -462,7 +462,9 @@ void bios(int n) {
                     return;
                 case 0x05: // format
                     fseek(d->f, (lba - s) << 9, SEEK_SET);
-                    fwrite(&buf, 512, d->s, d->f);
+                    for (int i = 0; i < d->s; ++i) {
+                        fwrite(&buf, 512, 1, d->f);
+                    }
                     AH = CF = 0;
                     return;
                 case 0x08: // get drive params

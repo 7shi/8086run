@@ -34,11 +34,8 @@ extern int kbhit();
 #include <sys/stat.h>
 #include <string>
 
-void moveCursorToBottom();
-
 #ifdef _WIN32
 void inittty() {
-    atexit(moveCursorToBottom);
 }
 #else
 #include <sys/wait.h>
@@ -77,7 +74,6 @@ void siginthandler(int) {
 
 void resettty() {
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    moveCursorToBottom();
 }
 
 void inittty() {
@@ -100,7 +96,7 @@ uint8_t mem[0x110000], io[0x10000];
 uint16_t IP, oldip, r[8];
 uint8_t *r8[8];
 bool OF, DF, IF, TF, SF, ZF, AF, PF, CF;
-bool ptable[256], hltend, cleared;
+bool ptable[256];
 
 #define AX r[0]
 #define CX r[1]
@@ -278,73 +274,9 @@ uint8_t kbscan[] = {
     0x2d, 0x15, 0x2c, 0x1a, 0x2b, 0x1b, 0x29, 0x0e, // 78-7f
 };
 
-// If there is an input to enqueue, return 0.
-// Otherwise, return (scan << 8) | ascii.
-
-uint16_t decodeKey(int ch) {
-    if (ch == EOF) return 0;
-#ifdef _WIN32
-    static int stroke = -1;
-    if (stroke == 0xe0 || stroke == 0) {
-        stroke = EOF;
-        return ch << 8;
-    }
-    if (ch == 0xe0 || ch == 0) {
-        stroke = ch;
-        return 0;
-    }
-    stroke = EOF;
-#else
-    static std::string stroke;
-    if (!stroke.empty()) {
-        stroke += ch;
-        if (stroke == "\x1bO") { // NumLock
-            return 0;
-        } else if (stroke == "\x1bOP") { // NumLock (ignore)
-            stroke.clear();
-            return 0;
-        } else if (stroke == "\x1b[") {
-            return 0;
-        } else if (stroke == "\x1b[A") { // up
-            stroke.clear();
-            return 'H' << 8;
-        } else if (stroke == "\x1b[B") { // down
-            stroke.clear();
-            return 'P' << 8;
-        } else if (stroke == "\x1b[C") { // right
-            stroke.clear();
-            return 'M' << 8;
-        } else if (stroke == "\x1b[D") { // left
-            stroke.clear();
-            return 'K' << 8;
-        } else if (stroke.length() > 2 && isdigit(ch)) { // F*
-            return 0;
-        } else if (stroke.length() > 3 && ch == '~') { // F*
-            int num = atoi(&stroke[2]);
-            stroke.clear();
-            if (11 <= num && num <= 15) return (0x3b + (num - 11)) << 8;
-            if (17 <= num && num <= 21) return (0x40 + (num - 17)) << 8;
-            if (23 <= num && num <= 24) return (0x85 + (num - 23)) << 8;
-            return 0;
-        }
-    }
-    if (ch == 0x1b) {
-        stroke = "\x1b";
-        return 0;
-    }
-    stroke.clear();
-#endif
-    if (ch < 128 && kbscan[ch]) {
-        return (kbscan[ch] << 8) | ch;
-    }
-    return 0;
-}
-
 void bios(int n) {
     void intr(int);
     static uint8_t buf[512];
-    static FILE *fhcopy;
-    static bool hread;
     switch (n) {
         case 0x00: // #DE
             error("#DE: division exception");
@@ -370,36 +302,16 @@ void bios(int n) {
                 int tail = read16(&mem[0x41c]) - 0x1e;
                 int next = (tail + 2) & 0x1f;
                 if (next == head) break;
-                uint16_t scanasc = decodeKey(getch());
-                if (scanasc) {
-                    write16(&mem[0x41e + tail], scanasc);
+                int ch = getch();
+                if (ch != EOF && kbscan[ch]) {
+                    mem[0x41e + tail] = ch;
+                    mem[0x41f + tail] = kbscan[ch];
                     write16(&mem[0x41c], 0x1e + next);
                 }
             }
             return;
         case 0x10: // video
             switch (AH) {
-                case 0x00:
-#ifdef _WIN32
-                    system("cls");
-#else
-                    printf("\x1b[H\x1b[J");
-                    fflush(stdout);
-#endif
-                    cleared = true;
-                    return;
-                case 0x02:
-                {
-#ifdef _WIN32
-                    HANDLE hStd = GetStdHandle(STD_OUTPUT_HANDLE);
-                    COORD pos = {DL, DH};
-                    SetConsoleCursorPosition(hStd, pos);
-#else
-                    printf("\x1b[%d;%dH", DH + 1, DL + 1);
-                    fflush(stdout);
-#endif
-                    return;
-                }
                 case 0x0e:
                     if (write(STDOUT_FILENO, &AL, 1));
                     return;
@@ -413,28 +325,6 @@ void bios(int n) {
             return;
         case 0x13: // disk
         {
-            switch (AH) { // ORIGINAL EXTENSIONS
-                case 0xfe: // hopen
-                    if (fhcopy) fclose(fhcopy);
-                    hread = AL != 1;
-                    CF = !(fhcopy = fopen((char *) &DS[DX], hread ? "rb" : "wb"));
-                    return;
-                case 0xff: // hcopy
-                    if (fhcopy) {
-                        if (hread) {
-                            CX = fread(&DS[DX], 1, 512, fhcopy);
-                        } else {
-                            CX = fwrite(&DS[DX], 1, CX, fhcopy);
-                        }
-                        if (!CX) {
-                            fclose(fhcopy);
-                            fhcopy = NULL;
-                        }
-                    } else {
-                        CX = 0;
-                    }
-                    return;
-            }
             if (DL > 1 || !disks[DL].f) {
                 CF = 1; // error
                 AH = 1; // invalid
@@ -499,9 +389,6 @@ void bios(int n) {
             CF = 1;
             return;
         }
-        case 0x14: // serial port
-            CF = 1; // error
-            return;
         case 0x15: // system
             switch (AH) {
                 case 0x88: // get extended memory size
@@ -533,15 +420,6 @@ void bios(int n) {
             }
             break;
         }
-        case 0x17: // parallel port
-            CF = 1; // error
-            return;
-        case 0x18: // boot fault
-            error("Boot failed (INT 18H)");
-            return;
-        case 0x19: // bootstrap
-            error("Bootstrap (INT 19H) not implemented");
-            return;
         case 0x1a: // time
             switch (AH) {
                 case 0x00: // get system time
@@ -579,8 +457,6 @@ void bios(int n) {
                     return; // ignore
             }
             break;
-        case 0x1b: // Control-Break handler
-            return;
         case 0x1c: // timer handler
             return;
     }
@@ -1589,9 +1465,6 @@ void step(uint8_t rep, SReg *seg) {
             step(b, seg);
             return;
         case 0xf4: // hlt
-            if (hltend) {
-                exit(0);
-            }
             ++IP;
             return;
         case 0xf5: // cmc
@@ -1782,27 +1655,11 @@ void step(uint8_t rep, SReg *seg) {
     error("not implemented: %02x%02x%02x", b, p[1], p[2]);
 }
 
-void moveCursorToBottom() {
-    if (cleared) {
-        AH = 2, DL = 79, DH = 24;
-        bios(0x10);
-        AX = 0x0e0d;
-        bios(0x10);
-    }
-}
-
 int main(int argc, char *argv[]) {
     inittty();
 
-    char *appname = argv[0];
-    if (argc > 1 && !strcmp(argv[1], "-hlt")) {
-        hltend = true;
-        --argc;
-        ++argv;
-    }
     if (argc < 2 || 3 < argc) {
-        fprintf(stderr, "usage: %s [-hlt] fd1image [fd2image]\n", appname);
-        fprintf(stderr, "  -hlt: stop on HLT (for demo)\n");
+        fprintf(stderr, "usage: %s fd1image [fd2image]\n", argv[0]);
         return 1;
     }
     for (int i = 1; i < argc; ++i) {

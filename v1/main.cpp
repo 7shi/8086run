@@ -11,7 +11,7 @@
 #  define fileno _fileno
 #  define write _write
 #  define getch _getch
-#  define kbhit _kbhit]
+#  define kbhit _kbhit
 #elif defined(_WIN32)
 #  include <windows.h>
 #  include <conio.h>

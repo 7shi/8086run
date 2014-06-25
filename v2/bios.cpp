@@ -1,6 +1,7 @@
 // This file is in the public domain.
 
 #include "8086run.h"
+#include "tty.h"
 #include <ctype.h>
 #include <stdint.h>
 #include <stdarg.h>

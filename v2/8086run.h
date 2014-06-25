@@ -22,6 +22,7 @@
 #  endif
 #else
 #  include <unistd.h>
+#  include <fcntl.h>
    extern int getch();
    extern int kbhit();
 #endif

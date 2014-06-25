@@ -7,6 +7,7 @@ void inittty() {
     atexit(moveCursorToBottom);
 }
 #else
+#include <string.h>
 #include <termios.h>
 #include <signal.h>
 

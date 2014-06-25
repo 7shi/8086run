@@ -1,7 +1,7 @@
 TARGET   = 8086run
 CC       = gcc
 CXX      = g++
-CFLAGS   = -O1 -Wall -Wno-unused-result -g
+CFLAGS   = -O1 -Wall -g
 CXXFLAGS = $(CFLAGS)
 LDFLAGS  =
 SOURCES  = main.cpp

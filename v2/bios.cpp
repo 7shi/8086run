@@ -99,7 +99,7 @@ void bios(int n) {
                     return;
                 }
                 case 0x0e:
-                    write(STDOUT_FILENO, &AL, 1);
+                    if (write(STDOUT_FILENO, &AL, 1));
                     return;
             }
             return; // ignore

@@ -2,11 +2,27 @@
 // derived from 7run: https://bitbucket.org/7shi/i8086tools
 
 #ifdef _MSC_VER
-#define _CRT_SECURE_NO_WARNINGS
-#include <io.h>
+#  pragma warning(disable:4244; disable:4800; disable:4805)
+#  define _CRT_SECURE_NO_WARNINGS
+#  include <windows.h>
+#  include <conio.h>
+#  include <io.h>
+#  define STDOUT_FILENO 1
+#  define fileno _fileno
+#  define write _write
+#  define getch _getch
+#  define kbhit _kbhit]
+#elif defined(_WIN32)
+#  include <windows.h>
+#  include <conio.h>
+#  include <unistd.h>
 #else
-#include <unistd.h>
+#  include <unistd.h>
+#  include <fcntl.h>
+extern int getch();
+extern int kbhit();
 #endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -21,17 +37,6 @@
 void moveCursorToBottom();
 
 #ifdef _WIN32
-#include <windows.h>
-#include <conio.h>
-#ifdef _MSC_VER
-#pragma warning(disable:4244; disable:4800; disable:4805)
-#define STDOUT_FILENO 1
-#define fileno _fileno
-#define write _write
-#define getch _getch
-#define kbhit _kbhit
-#endif
-
 void inittty() {
     atexit(moveCursorToBottom);
 }

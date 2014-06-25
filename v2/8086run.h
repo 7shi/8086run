@@ -2,10 +2,6 @@
 
 #pragma once
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 #ifdef _MSC_VER
 #  pragma warning(disable:4244; disable:4800; disable:4805)
 #  define _CRT_SECURE_NO_WARNINGS
@@ -19,6 +15,10 @@
 #  include <unistd.h>
 #  include <fcntl.h>
 #endif
+
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 extern uint8_t mem[], io[];
 extern uint16_t IP, oldip, r[];

@@ -12,8 +12,9 @@ all: $(TARGET) $(COMS)
 $(TARGET): $(OBJECTS)
 	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS)
 
-main.o: main.cpp
-	$(CXX) -c $(CXXFLAGS) main.cpp
+.SUFFIXES: .cpp.o
+.cpp.o:
+	$(CXX) -c $(CXXFLAGS) $<
 
 clean:
 	rm -f $(TARGET) $(TARGET).exe *.o *core

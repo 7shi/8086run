@@ -3,7 +3,9 @@
 #include "8086run.h"
 #include "tty.h"
 #include <string.h>
-#include <time.h>
+
+int counter;
+clock_t nextClock;
 
 int main(int argc, char *argv[]) {
     inittty();
@@ -57,24 +59,25 @@ int main(int argc, char *argv[]) {
     if (fread(&mem[IP], 1, 512, disks[0].f)); // read MBR
     write16(&mem[0x41a], 0x1e); // keyboard queue head
     write16(&mem[0x41c], 0x1e); // keyboard queue tail
-    int interval = 1 << 16, counter = interval, pitc = 0, trial = 4;
-    clock_t next = clock();
+    int interval = 1 << 16, pitc = 0, trial = 4;
+    counter = interval;
+    nextClock = clock();
     while (IP || *CS) {
         if (!--counter) {
             clock_t c = clock();
-            if (c <= next && !--trial) {
+            if (c <= nextClock && !--trial) {
                 int old = interval;
                 if ((interval <<= 1) < old) interval = old;
                 trial = 4;
             }
-            while (c > next) {
+            while (c > nextClock) {
                 intr(8);
                 // 3600/65536 = 225/4096
                 int t1 = pitc * 225000 / 4096;
                 int t2 = (++pitc) * 225000 / 4096;
                 if (pitc == 4096) pitc = 0;
                 if (kbhit()) intr(9);
-                next += CLOCKS_PER_SEC * (t2 - t1) / 1000;
+                nextClock += CLOCKS_PER_SEC * (t2 - t1) / 1000;
                 trial = 4;
             }
             counter = interval;

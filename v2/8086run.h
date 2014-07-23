@@ -19,12 +19,15 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 extern uint8_t mem[], io[];
 extern uint16_t IP, oldip, r[];
 extern uint8_t *r8[];
 extern bool OF, DF, IF, TF, SF, ZF, AF, PF, CF;
 extern bool ptable[], hltend, cleared;
+extern int counter;
+extern clock_t nextClock;
 
 #define AX r[0]
 #define CX r[1]

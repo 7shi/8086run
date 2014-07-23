@@ -345,6 +345,10 @@ void step(uint8_t rep, SReg *seg) {
         case 0x0e: // push cs
             ++IP;
             return push(*CS);
+        case 0x0f: // pop cs
+            ++IP;
+            CS = pop();
+            return;
         case 0x10: // adc r/m, reg8
         case 0x11: // adc r/m, reg16
         case 0x12: // adc reg8, r/m

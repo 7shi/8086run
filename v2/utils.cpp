@@ -4,6 +4,7 @@
 #include <windows.h>
 #endif
 #include <time.h>
+#include <sys/time.h>
 
 void msleep(int msec) {
     if (msec < 0) return;
@@ -22,9 +23,9 @@ int mclock() {
     clk -= clk0;
     return clk * 1000 / CLOCKS_PER_SEC;
 #else
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    static time_t sec0 = ts.tv_sec;
-    return (ts.tv_sec - sec0) * 1000 + ts.tv_nsec / 1000000;
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    static time_t sec0 = tv.tv_sec;
+    return (tv.tv_sec - sec0) * 1000 + tv.tv_usec / 1000;
 #endif
 }

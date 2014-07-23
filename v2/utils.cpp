@@ -1,10 +1,9 @@
 // This file is in the public domain.
 
 #ifdef _WIN32
-#  include <windows.h>
-#else
-#  include <time.h>
+#include <windows.h>
 #endif
+#include <time.h>
 #include <stdio.h>
 
 void clocksleep(int clk) {

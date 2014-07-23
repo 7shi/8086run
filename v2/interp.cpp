@@ -1015,6 +1015,8 @@ void step(uint8_t rep, SReg *seg) {
             if (hltend) {
                 exit(0);
             }
+            msleep((nextClock - clock()) * 1000 / CLOCKS_PER_SEC);
+            counter = 1;
             ++IP;
             return;
         case 0xf5: // cmc

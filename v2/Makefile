@@ -4,7 +4,7 @@ CXX      = g++
 CFLAGS   = -O1 -Wall -g
 CXXFLAGS = $(CFLAGS)
 LDFLAGS  =
-SOURCES  = bios.cpp debug.cpp interp.cpp io.cpp keyboard.cpp main.cpp tty.cpp
+SOURCES  = bios.cpp debug.cpp interp.cpp io.cpp keyboard.cpp main.cpp tty.cpp utils.cpp
 OBJECTS  = $(SOURCES:.cpp=.o)
 
 all: $(TARGET) $(COMS)

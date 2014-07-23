@@ -97,3 +97,4 @@ extern void bios(int n);
 extern void intr(int n);
 extern void step(uint8_t rep, SReg *seg);
 extern void moveCursorToBottom();
+extern void msleep(int msec);

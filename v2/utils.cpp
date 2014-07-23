@@ -16,3 +16,17 @@ void clocksleep(int clk) {
     nanosleep(&ts, NULL);
 #endif
 }
+
+int mclock() {
+#ifdef _WIN32
+    clock_t clk = clock();
+    static clock_t clk0 = clk;
+    clk -= clk0;
+    return clk * 1000 / CLOCKS_PER_SEC;
+#else
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    static time_t sec0 = ts.tv_sec;
+    return (ts.tv_sec - sec0) * 1000 + ts.tv_nsec / 1000000;
+#endif
+}

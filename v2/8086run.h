@@ -98,3 +98,4 @@ extern void intr(int n);
 extern void step(uint8_t rep, SReg *seg);
 extern void moveCursorToBottom();
 extern void clocksleep(int clk);
+extern int mclock();

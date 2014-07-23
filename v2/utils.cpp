@@ -4,7 +4,6 @@
 #include <windows.h>
 #endif
 #include <time.h>
-#include <stdio.h>
 
 void msleep(int msec) {
     if (msec < 0) return;

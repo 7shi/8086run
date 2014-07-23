@@ -1015,7 +1015,7 @@ void step(uint8_t rep, SReg *seg) {
             if (hltend) {
                 exit(0);
             }
-            clocksleep(nextClock - clock());
+            msleep(nextClock - mclock());
             counter = 1;
             ++IP;
             return;

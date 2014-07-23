@@ -26,8 +26,7 @@ extern uint16_t IP, oldip, r[];
 extern uint8_t *r8[];
 extern bool OF, DF, IF, TF, SF, ZF, AF, PF, CF;
 extern bool ptable[], hltend, cleared;
-extern int counter;
-extern clock_t nextClock;
+extern int counter, nextClock;
 
 #define AX r[0]
 #define CX r[1]
@@ -97,5 +96,5 @@ extern void bios(int n);
 extern void intr(int n);
 extern void step(uint8_t rep, SReg *seg);
 extern void moveCursorToBottom();
-extern void clocksleep(int clk);
+extern void msleep(int msec);
 extern int mclock();

@@ -6,9 +6,8 @@
 #include <time.h>
 #include <stdio.h>
 
-void clocksleep(int clk) {
-    if (clk < 0) return;
-    int msec = clk * 1000 / CLOCKS_PER_SEC;
+void msleep(int msec) {
+    if (msec < 0) return;
 #ifdef _WIN32
     Sleep(msec);
 #else

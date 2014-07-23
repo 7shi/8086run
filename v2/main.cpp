@@ -4,8 +4,7 @@
 #include "tty.h"
 #include <string.h>
 
-int counter;
-clock_t nextClock;
+int counter, nextClock;
 
 int main(int argc, char *argv[]) {
     inittty();
@@ -61,10 +60,10 @@ int main(int argc, char *argv[]) {
     write16(&mem[0x41c], 0x1e); // keyboard queue tail
     int interval = 1 << 16, pitc = 0, trial = 4;
     counter = interval;
-    nextClock = clock();
+    nextClock = mclock();
     while (IP || *CS) {
         if (!--counter) {
-            clock_t c = clock();
+            int c = mclock();
             if (c <= nextClock && !--trial) {
                 int old = interval;
                 if ((interval <<= 1) < old) interval = old;
@@ -77,7 +76,7 @@ int main(int argc, char *argv[]) {
                 int t2 = (++pitc) * 225000 / 4096;
                 if (pitc == 4096) pitc = 0;
                 if (kbhit()) intr(9);
-                nextClock += CLOCKS_PER_SEC * (t2 - t1) / 1000;
+                nextClock += t2 - t1;
                 trial = 4;
             }
             counter = interval;

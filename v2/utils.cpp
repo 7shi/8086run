@@ -11,7 +11,7 @@ void msleep(int msec) {
 #ifdef _WIN32
     Sleep(msec);
 #else
-    struct timespec ts = { 0, msec * 1000000 };
+    struct timespec ts = { msec / 1000, (msec % 1000) * 1000000 };
     nanosleep(&ts, NULL);
 #endif
 }

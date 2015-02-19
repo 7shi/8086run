@@ -13,13 +13,16 @@ int main(int argc, char *argv[]) {
     while (argc > 1) {
         if (!strcmp(argv[1], "-hlt")) {
             hltend = true;
+        } else if (!strcmp(argv[1], "-strict")) {
+            strict8086 = true;
         } else break;
         --argc;
         ++argv;
     }
     if (argc < 2 || 3 < argc) {
-        fprintf(stderr, "usage: %s [-hlt] fd1image [fd2image]\n", appname);
+        fprintf(stderr, "usage: %s [-hlt] [-strict] fd1image [fd2image]\n", appname);
         fprintf(stderr, "  -hlt: stop on HLT (for demo)\n");
+        fprintf(stderr, "  -strict: deny to execute instructions which are not in 8086 microprocessor\n");
         return 1;
     }
     for (int i = 1; i < argc; ++i) {

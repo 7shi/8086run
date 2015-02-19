@@ -7,7 +7,7 @@ uint8_t mem[0x110000], io[0x10000];
 uint16_t IP, oldip, r[8];
 uint8_t *r8[8];
 bool OF, DF, IF, TF, SF, ZF, AF, PF, CF;
-bool ptable[256], hltend, cleared;
+bool ptable[256], hltend, strict8086, cleared;
 struct SReg sr[4];
 
 static inline int setf8(int value) {

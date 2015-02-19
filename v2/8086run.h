@@ -25,7 +25,7 @@ extern uint8_t mem[], io[];
 extern uint16_t IP, oldip, r[];
 extern uint8_t *r8[];
 extern bool OF, DF, IF, TF, SF, ZF, AF, PF, CF;
-extern bool ptable[], hltend, cleared;
+extern bool ptable[], hltend, strict8086, cleared;
 extern int counter, nextClock;
 
 #define AX r[0]

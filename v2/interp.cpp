@@ -1049,7 +1049,7 @@ void step(uint8_t rep, SReg *seg) {
                     return;
                 case 5: // imul byte r/m
                     AX = int8_t(AL) * *opr1;
-                    OF = CF = AH;
+                    OF = CF = int8_t(AL) != int16_t(AX);
                     return;
                 case 6: // div byte r/m
                     dst = AX;
@@ -1103,7 +1103,7 @@ void step(uint8_t rep, SReg *seg) {
                     val = int16_t(AX) * *opr1;
                     DX = val >> 16;
                     AX = val;
-                    OF = CF = DX;
+                    OF = CF = int16_t(AX) != int32_t((int32_t(DX)<<16) | int32_t(AX));
                     return;
                 case 6: // div r/m
                 {

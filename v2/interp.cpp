@@ -960,7 +960,7 @@ void step(uint8_t rep, SReg *seg) {
         case 0xdd:
         case 0xde:
         case 0xdf:
-            IP += 2;
+            IP += opr1.modrm(p, b & 1, seg);
             return;
         case 0xe0: // loopnz/loopne
             return jumpif(p[1], --CX > 0 && !ZF);

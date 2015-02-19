@@ -568,6 +568,7 @@ void step(uint8_t rep, SReg *seg) {
                     opr1 = opr1.setf(val);
                     return;
                 case 1: // or
+                    if(strict8086 && b == 0x83) error("or r/m16, imm8 is not in 8086");
                     CF = false;
                     opr1 = opr1.setf(*opr1 | *opr2);
                     return;
@@ -584,6 +585,7 @@ void step(uint8_t rep, SReg *seg) {
                     opr1 = opr1.setf(val);
                     return;
                 case 4: // and
+                    if(strict8086 && b == 0x83) error("and r/m16, imm8 is not in 8086");
                     CF = false;
                     opr1 = opr1.setf(*opr1 & *opr2);
                     return;
@@ -594,6 +596,7 @@ void step(uint8_t rep, SReg *seg) {
                     opr1 = opr1.setf(val);
                     return;
                 case 6: // xor
+                    if(strict8086 && b == 0x83) error("xor r/m16, imm8 is not in 8086");
                     CF = false;
                     opr1 = opr1.setf(*opr1 ^ *opr2);
                     return;
@@ -860,6 +863,7 @@ void step(uint8_t rep, SReg *seg) {
             return;
         case 0xc0: // byte r/m, imm8 (80186)
         case 0xc1: // r/m, imm8 (80186)
+            if (strict8086) error("not in 8086: %02x%02x%02x", b, p[1], p[2]);
             IP += opr1.modrm(p, b & 1, seg) + 1;
             return shift(&opr1, CS[IP - 1], p);
         case 0xc2: // ret imm16
@@ -887,6 +891,7 @@ void step(uint8_t rep, SReg *seg) {
             return;
         case 0xc8: // enter imm16, imm8 (80186)
         {
+            if (strict8086) error("enter is not in 8086");
             IP += 4;
             int lv = p[3] & 31;
             push(BP);
@@ -902,6 +907,7 @@ void step(uint8_t rep, SReg *seg) {
             return;
         }
         case 0xc9: // leave (80186)
+            if (strict8086) error("leave is not in 8086");
             ++IP;
             SP = BP;
             BP = pop();

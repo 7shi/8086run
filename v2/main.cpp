@@ -10,8 +10,10 @@ int main(int argc, char *argv[]) {
     inittty();
 
     char *appname = argv[0];
-    if (argc > 1 && !strcmp(argv[1], "-hlt")) {
-        hltend = true;
+    while (argc > 1) {
+        if (!strcmp(argv[1], "-hlt")) {
+            hltend = true;
+        } else break;
         --argc;
         ++argv;
     }

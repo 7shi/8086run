@@ -120,11 +120,11 @@ struct SReg {
     uint8_t *p;
     uint16_t v;
 
-    inline uint16_t operator *() {
+    inline uint16_t operator*() {
         return v;
     }
 
-    inline uint16_t operator =(uint16_t v) {
+    inline uint16_t operator=(uint16_t v) {
         p = &mem[v << 4];
         return this->v = v;
     }
@@ -603,12 +603,12 @@ struct Operand {
         return w ? read16(p) : *p;
     }
 
-    inline int operator *() const {
+    inline int operator*() const {
         int ret = u();
         return w ? int16_t(ret) : int8_t(ret);
     }
 
-    inline void operator =(int value) {
+    inline void operator=(int value) {
         if (type == Reg) {
             if (w) {
                 r[v] = value;
@@ -1547,7 +1547,7 @@ void step(uint8_t rep, SReg *seg) {
                     val = int16_t(AX) * *opr1;
                     DX = val >> 16;
                     AX = val;
-                    OF = CF = int16_t(AX) != int32_t((int32_t(DX)<<16) | int32_t(AX));
+                    OF = CF = int16_t(AX) != int32_t((int32_t(DX) << 16) | int32_t(AX));
                     return;
                 case 6: // div r/m
                 {

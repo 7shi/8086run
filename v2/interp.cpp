@@ -150,12 +150,12 @@ struct Operand {
         return w ? read16(p) : *p;
     }
 
-    inline int operator *() const {
+    inline int operator*() const {
         int ret = u();
         return w ? int16_t(ret) : int8_t(ret);
     }
 
-    inline void operator =(int value) {
+    inline void operator=(int value) {
         if (type == Reg) {
             if (w) {
                 r[v] = value;
@@ -568,7 +568,7 @@ void step(uint8_t rep, SReg *seg) {
                     opr1 = opr1.setf(val);
                     return;
                 case 1: // or
-                    if(strict8086 && b == 0x83) error("or r/m16, imm8 is not in 8086");
+                    if (strict8086 && b == 0x83) error("or r/m16, imm8 is not in 8086");
                     CF = false;
                     opr1 = opr1.setf(*opr1 | *opr2);
                     return;
@@ -585,7 +585,7 @@ void step(uint8_t rep, SReg *seg) {
                     opr1 = opr1.setf(val);
                     return;
                 case 4: // and
-                    if(strict8086 && b == 0x83) error("and r/m16, imm8 is not in 8086");
+                    if (strict8086 && b == 0x83) error("and r/m16, imm8 is not in 8086");
                     CF = false;
                     opr1 = opr1.setf(*opr1 & *opr2);
                     return;
@@ -596,7 +596,7 @@ void step(uint8_t rep, SReg *seg) {
                     opr1 = opr1.setf(val);
                     return;
                 case 6: // xor
-                    if(strict8086 && b == 0x83) error("xor r/m16, imm8 is not in 8086");
+                    if (strict8086 && b == 0x83) error("xor r/m16, imm8 is not in 8086");
                     CF = false;
                     opr1 = opr1.setf(*opr1 ^ *opr2);
                     return;
@@ -1109,7 +1109,7 @@ void step(uint8_t rep, SReg *seg) {
                     val = int16_t(AX) * *opr1;
                     DX = val >> 16;
                     AX = val;
-                    OF = CF = int16_t(AX) != int32_t((int32_t(DX)<<16) | int32_t(AX));
+                    OF = CF = int16_t(AX) != int32_t((int32_t(DX) << 16) | int32_t(AX));
                     return;
                 case 6: // div r/m
                 {

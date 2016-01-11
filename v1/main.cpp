@@ -736,7 +736,10 @@ inline void shift(Operand *opr, int c, uint8_t *p) {
             break;
         case 4: // shl/sal
             if (c > 0) {
-                val = opr->u() << c;
+                val = opr->u();
+                for (int i = 0; i < c; ++i) {
+                    val <<= 1;
+                }
                 *opr = opr->setf(val);
                 CF = val & (m << 1);
                 OF = CF != bool(val & m);
@@ -744,7 +747,10 @@ inline void shift(Operand *opr, int c, uint8_t *p) {
             break;
         case 5: // shr
             if (c > 0) {
-                val = opr->u() >> (c - 1);
+                val = opr->u();
+                for (int i = 1; i < c; ++i) {
+                    val >>= 1;
+                }
                 *opr = opr->setf(val >> 1);
                 CF = val & 1;
                 OF = val & m;
@@ -752,7 +758,10 @@ inline void shift(Operand *opr, int c, uint8_t *p) {
             break;
         case 7: // sar
             if (c > 0) {
-                val = **opr >> (c - 1);
+                val = **opr;
+                for (int i = 1; i < c; ++i) {
+                    val >>= 1;
+                }
                 *opr = opr->setf(val >> 1);
                 CF = val & 1;
                 OF = false;
